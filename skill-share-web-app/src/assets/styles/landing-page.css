@@ -1,0 +1,95 @@
+.Hero {
+     margin-top: 7em;
+}
+
+.Hero {
+  display: flex;
+  flex-direction: column;
+  padding: 2.5em 1.5em;
+  gap: 2em;
+  align-items: center;
+  text-align: center;
+}
+
+.Marvel {
+  flex-direction: column-reverse;
+  display: flex;
+  padding: 2.5em 1.5em;
+  gap: 2em;
+  align-items: center;
+  text-align: center;
+}
+
+.Hero img, .Marvel img {
+  width: 100%;
+  max-width: 30em;
+  margin: 1em 0;
+}
+
+.Footer {
+  background-color: lightgray;
+  padding: 2.5em 1.5em;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+  .Footer h2,
+    .Footer h3 {
+        background-color: lightgray;
+        margin: 0;
+    }
+
+
+.land-button {
+  padding: 8px 16px;
+  border: 1.5px solid #000000;
+  border-radius: 15px;
+  text-decoration: none;
+  font-weight: 800;
+  transition: background-color 0.2s ease-in-out;
+  color: #000000;
+  width: 25em;
+  align-self: anchor-center;
+  background-color: #f0e130;
+}
+
+.land-button:hover {
+  background-color: #d4a017;
+}
+
+@media (min-width: 768px) {
+  .Hero, .Marvel {
+    flex-direction: row;
+    justify-content: space-between;
+    padding: 2.5em 5em;
+    text-align: left;
+  }
+
+  .Hero img, .Marvel img {
+    margin: 0;
+  }
+
+  .LeftContent {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .Footer {
+    background-color: lightgray;
+    display: flex;
+    padding: 2.5em 5em;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: center;
+    }
+
+    .Footer h2:hover {
+        color: #d4a017;
+        border-bottom: 3px solid #d4a017;
+    }
+}
