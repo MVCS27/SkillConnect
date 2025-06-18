@@ -2,11 +2,12 @@ import React from "react";
 import { faRightFromBracket } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { logOutUser } from '../../controllers/logout';
-import { Link } from "react-router-dom";
+import NavbarAdmin from "../../components/navbar-admin"; // <-- Import
 
 export default function AdminDashboard() {
   return (
     <div style={{ minHeight: "100vh", background: "#f8f9fa" }}>
+      <NavbarAdmin /> {/* Add here */}
       <nav style={{ padding: "1rem 2rem" }}>
         <h2>SkillShare Admin Dashboard</h2>
 
@@ -64,11 +65,6 @@ export default function AdminDashboard() {
               <li>Approve new providers</li>
               <li>View provider documents</li>
               <li>Remove providers</li>
-              <li>
-                <Link to="/admin-providers" style={{ color: "#007bff", textDecoration: "none" }}>
-                  Go to Admin Providers
-                </Link>
-              </li>
             </ul>
           </div>
           <div

@@ -12,7 +12,7 @@ function Footer() {
           </h3>
 
           <h2 className="text-4xl md:text-5xl font-bold leading-tight">
-            skillconnect2468@gmail.com
+            skillconnect12345@gmail.com
           </h2>
           
         </div>

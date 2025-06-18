@@ -9,6 +9,8 @@ import AccountVerify from './utils/account-verify'
 
 import AdminDashboard from './pages/admin/admin-dashboard';
 import AdminProviders from './pages/admin/admin-providers';
+import AdminUsers from './pages/admin/admin-users';
+import AdminBookings from './pages/admin/admin-bookings'; 
 
 import UserSignUp from './pages/register-new-user';
 import Login from './pages/login';
@@ -66,6 +68,8 @@ function App() {
           <>
             <Route path="/admin-dashboard" element={<AdminDashboard />} />
             <Route path="/admin-providers" element={<AdminProviders />} />
+            <Route path="/admin-users" element={<AdminUsers />} />
+            <Route path="/admin-bookings" element={<AdminBookings />} />
           </>
         </Route>
 

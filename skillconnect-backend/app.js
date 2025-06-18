@@ -425,14 +425,14 @@ app.post("/send-admin-password", async (req, res) => {
     let transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
-        user: "sagunmarkvincent@@gmail.com", // replace with your Gmail
-        pass: "oibx hpfb elmo riae" // use an App Password, not your Gmail password
+        user: "skillconnect12345@gmail.com", // replace with your Gmail
+        pass: "leye axqt plrd djwm" // use an App Password, not your Gmail password
       }
     });
 
     await transporter.sendMail({
       from: '"SkillShare Admin" <your_gmail@gmail.com>',
-      to: "sagunmarkvincent@gmail.com",
+      to: "skillconnect12345@gmail.com",
       subject: "Your Admin Login Password",
       text: `Your admin login password is: ${password}`,
     });
@@ -475,13 +475,13 @@ app.post("/admin/send-verification-email", async (req, res) => {
     let transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
-        user: "sagunmarkvincent@gmail.com",
-        pass: "oibx hpfb elmo riae"
+        user: "skillconnect12345@gmail.com",
+        pass: "leye axqt plrd djwm"
       }
     });
 
     await transporter.sendMail({
-      from: '"SkillShare Admin" <sagunmarkvincent@gmail.com>',
+      from: '"SkillShare Admin" <skillconnect12345@gmail.com>',
       to: email,
       subject,
       text,
@@ -491,6 +491,28 @@ app.post("/admin/send-verification-email", async (req, res) => {
   } catch (error) {
     console.error("Failed to send verification email:", error);
     res.json({ status: "error" });
+  }
+});
+
+// Get all customers (userType: "customer")
+app.get("/admin/customers", async (req, res) => {
+  try {
+    const customers = await User.find({ userType: "customer" }).select("-password");
+    res.json({ status: "ok", data: customers });
+  } catch (error) {
+    res.status(500).json({ status: "error", error: "Failed to fetch customers" });
+  }
+});
+
+// Get all bookings
+app.get("/admin/bookings", async (req, res) => {
+  try {
+    const bookings = await Booking.find()
+      .populate("customerId", "firstName lastName email")
+      .populate("providerId", "firstName lastName email");
+    res.json({ status: "ok", data: bookings });
+  } catch (error) {
+    res.status(500).json({ status: "error", error: "Failed to fetch bookings" });
   }
 });
 
