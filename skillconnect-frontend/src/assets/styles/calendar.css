@@ -1,0 +1,7 @@
+.calendar-container {
+  display: flex;
+  flex-direction: column;
+  width: 30em;
+  height: 100%;
+  margin: 10em 6em;
+}
