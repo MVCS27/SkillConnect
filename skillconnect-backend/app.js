@@ -18,6 +18,7 @@ app.use(express.json());
 
 const allowedOrigins = [
   "http://localhost:3000",
+  "https://skill-connect-git-main-mark-vincents-projects.vercel.app",
   "https://skill-connect-epz1sxqg8-mark-vincents-projects.vercel.app"
 ];
 
@@ -601,6 +602,10 @@ function getTransporter() {
     }
   });
 }
+
+app.get("/", (req, res) => {
+  res.send("SkillConnect backend is running!");
+});
 
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
