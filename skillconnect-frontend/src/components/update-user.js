@@ -1,18 +1,27 @@
 import React, { useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import '../assets/styles/form.css';
 import API_BASE_URL from "../config/api"; // <-- Add this import
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 
 function UpdateUser() {
   const location = useLocation();
+  const navigate = useNavigate(); // Add this line
   const [firstName, setFirstName] = useState("");
   const [firstNameError, setFirstNameError] = useState(false);
   const [lastName, setLastName] = useState("");
   const [lastNameError, setLastNameError] = useState(false);
-  const [mobile, setMobile] = useState("");
-  const [mobileError, setMobileError] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [phoneNumberError, setPhoneNumberError] = useState(false);
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState(false);
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordError, setPasswordError] = useState(false);
+  const [confirmPasswordError, setConfirmPasswordError] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Address state
   const [address, setAddress] = useState({
@@ -29,7 +38,7 @@ function UpdateUser() {
     if (location.state) {
       setFirstName(location.state.firstName || "");
       setLastName(location.state.lastName || "");
-      setMobile(location.state.mobile || "");
+      setPhoneNumber(location.state.phoneNumber || ""); // changed from mobile
       setEmail(location.state.email || "");
       setAddress(location.state.address || {
         street: "",
@@ -85,21 +94,30 @@ function UpdateUser() {
     // Add validation before sending
     const validFirstName = /^([A-Z][a-z]{1,})([ -][A-Z][a-z]{1,})*$/.test(firstName.trim());
     const validLastName = /^([A-Z][a-z]{1,})([ -][A-Z][a-z]{1,})*$/.test(lastName.trim());
-    const isValidMobile = /^09\d{9}$/.test(mobile);
+    const isValidPhoneNumber = /^09\d{9}$/.test(phoneNumber);
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const validEmail = emailRegex.test(email);
 
     setFirstNameError(!validFirstName);
     setLastNameError(!validLastName);
-    setMobileError(!isValidMobile);
+    setPhoneNumberError(!isValidPhoneNumber);
     setEmailError(!validEmail);
 
-    if (!validFirstName || !validLastName || !isValidMobile || !validEmail) {
+    if (!validFirstName || !validLastName || !isValidPhoneNumber || !validEmail) {
       return;
     }
 
+    if (password || confirmPassword) {
+      const isValid = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(password);
+      setPasswordError(!isValid);
+      setConfirmPasswordError(confirmPassword !== password);
+      if (!isValid || confirmPassword !== password) {
+        return;
+      }
+    }
+
     // Update user info
-    await fetch(`${API_BASE_URL}/updateUser`, {
+    const response = await fetch(`${API_BASE_URL}/updateUser`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -109,18 +127,21 @@ function UpdateUser() {
         id: location.state._id,
         firstName,
         lastName,
-        mobile,
+        phoneNumber,
         email,
         address,
+        ...(password ? { password } : {})
       }),
     });
-
-    // Upload image if selected
-    if (profileImageFile) {
-      await uploadProfileImage(location.state._id);
+    const data = await response.json();
+    if (data.status === "ok") {
+      if (profileImageFile) {
+        await uploadProfileImage(location.state._id);
+      }
+      window.location.href = "/customer-profile";
+    } else {
+      alert("Update failed: " + (data.data || "Unknown error"));
     }
-
-    window.location.href = "/customer-profile";
   };
 
   return (
@@ -188,28 +209,28 @@ function UpdateUser() {
         </div>
 
        <div className="mb-3">
-          <label>Mobile Number</label>
+          <label>Phone Number</label>
           <input
             type="text"
             className="form-control"
-            placeholder="Mobile Number"
-            value={mobile}
+            placeholder="Phone Number"
+            value={phoneNumber}
             maxLength="11"
             inputMode="numeric"
             onChange={(e) => {
               const value = e.target.value.replace(/\D/g, "");
-              setMobile(value);
+              setPhoneNumber(value);
             }}
             onBlur={(e) => {
               const value = e.target.value;
-              const isValidMobile = /^09\d{9}$/.test(value);
-              setMobileError(!isValidMobile);
+              const isValidPhoneNumber = /^09\d{9}$/.test(value);
+              setPhoneNumberError(!isValidPhoneNumber);
             }}
             required
           />
-          {mobileError && (
+          {phoneNumberError && (
             <div style={{ color: "red", fontSize: "0.875rem" }}>
-              Mobile number must start with 09 and be exactly 11 digits
+              Phone number must start with 09 and be exactly 11 digits
             </div>
           )}
         </div>
@@ -233,6 +254,57 @@ function UpdateUser() {
           {emailError && (
             <div style={{ color: "red", fontSize: "0.875rem" }}>
               Please enter a valid email address
+            </div>
+          )}
+        </div>
+
+{/* Password Field */}
+        <div className="mb-3 position-relative">
+          <label>New Password</label>
+          <input
+            type={showPassword ? 'text' : 'password'}
+            className="form-control"
+            placeholder="Enter Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            onBlur={() => {
+              const isValid = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(password);
+              setPasswordError(!isValid);
+            }}
+          />
+          <span
+            onClick={() => setShowPassword((prev) => !prev)}
+            style={{ position: 'absolute', right: '10px', top: '32px', cursor: 'pointer' }}
+          >
+            <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} />
+          </span>
+          {passwordError && (
+            <div style={{ color: 'red', fontSize: '0.875rem' }}>
+              Password must be at least 8 characters and include uppercase, lowercase, and a number.
+            </div>
+          )}
+        </div>
+
+        {/* Confirm Password Field */}
+        <div className="mb-3 position-relative">
+          <label>Re-enter New Password</label>
+          <input
+            type={showConfirmPassword ? 'text' : 'password'}
+            className="form-control"
+            placeholder="Re-enter Password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            onBlur={() => setConfirmPasswordError(confirmPassword !== password)}
+          />
+          <span
+            onClick={() => setShowConfirmPassword((prev) => !prev)}
+            style={{ position: 'absolute', right: '10px', top: '32px', cursor: 'pointer' }}
+          >
+            <FontAwesomeIcon icon={showConfirmPassword ? faEyeSlash : faEye} />
+          </span>
+          {confirmPasswordError && (
+            <div style={{ color: 'red', fontSize: '0.875rem' }}>
+              Passwords do not match.
             </div>
           )}
         </div>
@@ -294,9 +366,18 @@ function UpdateUser() {
           />
         </div>
 
-        <button onClick={updateData} className="btn btn-primary">
-          Save Changes
-        </button>
+        <div style={{ display: "flex", gap: "1rem" }}>
+          <button onClick={updateData} className="btn btn-primary">
+            Save Changes
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => navigate(-1)}
+          >
+            Cancel
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -21,12 +21,14 @@ export default function AdminBookings() {
     return acc;
   }, {});
 
+  const allStatuses = Array.from(new Set(bookings.map(b => b.status || "processing")));
+
   return (
     <div>
       <NavbarAdmin />
-      <div style={{ maxWidth: 1100, margin: "2rem auto", padding: "2rem" }}>
+      <div style={{ maxWidth: 1100, margin: "8em auto", padding: "2rem" }}>
         <h2 style={{ color: "#d4a017" }}>Admin Bookings</h2>
-        {["current", "in progress", "canceled", "complete"].map(status => (
+        {allStatuses.map(status => (
           <div key={status} style={{ marginBottom: "2rem" }}>
             <h3 style={{ color: "#888" }}>{status.charAt(0).toUpperCase() + status.slice(1)}</h3>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -48,7 +50,7 @@ export default function AdminBookings() {
                     <td>{booking.serviceCategory}</td>
                     <td>{booking.date}</td>
                     <td>{booking.time}</td>
-                    <td>{booking.status || "current"}</td>
+                    <td>{booking.status || "processing"}</td>
                   </tr>
                 ))}
               </tbody>

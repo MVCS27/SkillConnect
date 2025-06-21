@@ -1,0 +1,34 @@
+# Node modules
+node_modules/
+
+# Build output
+build/
+dist/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# dotenv environment variables
+.env
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE/project files
+.idea/
+.vscode/
+*.iml
+
+# Uploaded files and images
+skillconnect-backend/uploads/
+skillconnect-backend/images/
+
+# Coverage reports
+coverage/
+
+# Misc
+*.sqlite
+*.db

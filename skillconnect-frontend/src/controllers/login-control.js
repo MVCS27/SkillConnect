@@ -31,7 +31,7 @@ export class LoginHelper {
       .then((data) => {
         console.log(data, "userLogin");
 
-          if (data.status === "success!") {
+          if (data.status === "success") {
             window.localStorage.setItem("token", data.data);
             window.localStorage.setItem("userType", data.userType);
             window.localStorage.setItem("loggedIn", true);

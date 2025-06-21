@@ -1,6 +1,6 @@
 .navbar {
   width: 100%;
-  background-color: white;
+  background-color: whitf;
   border-bottom: 1px solid #e0e0e0;
   position: fixed;
   top: 0;
@@ -102,6 +102,24 @@
 
   .menu-toggle {
     display: block;
+    margin-left: 0;
+    margin-right: 0;
+    /* Remove any float or alignment that pushes it to the side */
+  }
+
+  .navbar-brand {
+    width: 100%;
+    justify-content: center;
+    display: flex;
+    align-items: center;
+    gap: 1em;
+    text-align: center;
+  }
+
+  .navbar-logo {
+    justify-content: center;
+    align-items: center;
+    display: flex;
   }
 
   .navbar-links {

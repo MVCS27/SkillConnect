@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import API_BASE_URL from "../config/api";
 import DatePicker from "react-datepicker";
+import NavbarLogedIn from "../components/navbar-logedin";
 import "react-datepicker/dist/react-datepicker.css";
 import "../assets/styles/profile.css";
-import NavbarLogedIn from "../components/navbar-logedin";
-import API_BASE_URL from "../config/api";
+import "../assets/styles/calendar.css";
 
 export default function ProviderDetails() {
   const { id } = useParams(); // providerId
@@ -120,7 +121,15 @@ export default function ProviderDetails() {
 
   // Get unavailable times for selected date
   const unavailableTimes = selectedDate
-    ? (unavailableSlots.find(slot => slot.date === selectedDate.toISOString().split("T")[0])?.times || [])
+    ? (unavailableSlots.find(slot => {
+        // Use local date string for comparison
+        const slotDate = new Date(slot.date + "T00:00:00");
+        return (
+          selectedDate.getFullYear() === slotDate.getFullYear() &&
+          selectedDate.getMonth() === slotDate.getMonth() &&
+          selectedDate.getDate() === slotDate.getDate()
+        );
+      })?.times || [])
     : [];
 
   const timeOptions = [
@@ -143,7 +152,7 @@ export default function ProviderDetails() {
           <div className="user-text">
             <h2>{provider.firstName} {provider.lastName}</h2>
             <p>Email: {provider.email}</p>
-            <p>Mobile: {provider.mobile}</p>
+            <p>Phone: {provider.phoneNumber}</p>
             <p>Service: {provider.serviceCategory || "N/A"}</p>
             <p>
               Address: {provider.address?.street}, {provider.address?.barangay}, {provider.address?.cityMunicipality}, {provider.address?.province}
@@ -168,11 +177,17 @@ export default function ProviderDetails() {
               minDate={new Date()}
               placeholderText="Select a date"
               filterDate={date => {
-                const dateStr = date.toISOString().split("T")[0];
-                // Only allow dates that are not fully booked (all times unavailable)
+                // Format date as yyyy-mm-dd in local time
+                const dateStr = date.getFullYear() + "-" +
+                  String(date.getMonth() + 1).padStart(2, "0") + "-" +
+                  String(date.getDate()).padStart(2, "0");
                 const slot = unavailableSlots.find(slot => slot.date === dateStr);
                 return !slot || slot.times.length < timeOptions.length;
               }}
+              dayClassName={date =>
+                date < new Date().setHours(0,0,0,0) ? "react-datepicker__day--disabled" : undefined
+              }
+              inline // <-- This makes the calendar always visible
             />
             {selectedDate && (
               <div>
@@ -202,6 +217,10 @@ export default function ProviderDetails() {
                 }
                 setBookingLoading(true);
                 try {
+                  // Format date as yyyy-mm-dd in local time
+                  const dateStr = selectedDate.getFullYear() + "-" +
+                    String(selectedDate.getMonth() + 1).padStart(2, "0") + "-" +
+                    String(selectedDate.getDate()).padStart(2, "0");
                   const response = await fetch(`${API_BASE_URL}/book`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -209,7 +228,7 @@ export default function ProviderDetails() {
                       customerId: customerData._id,
                       providerId: provider._id,
                       serviceCategory: provider.serviceCategory,
-                      date: selectedDate.toISOString().split("T")[0],
+                      date: dateStr,
                       time: selectedTime,
                     }),
                   });

@@ -15,7 +15,7 @@ export default function UserDetails() {
   const [profileImage, setProfileImage] = useState(null);
 
   const navigate = useNavigate();
-  const { firstName, lastName, email, mobile, address = {} } = userData;
+  const { firstName, lastName, email, phoneNumber, address = {} } = userData;
 
   const cancelBooking = async (bookingId) => {
     const res = await fetch(`${API_BASE_URL}/bookings/update`, {
@@ -81,7 +81,7 @@ export default function UserDetails() {
 
            <div className="user-text">
             <h2>{firstName} {lastName}</h2>
-            <p>{mobile}</p>
+            <p>{phoneNumber}</p>
             <p>{email}</p>
             <p>{address.street}, {address.barangay}</p>
             <p>{address.cityMunicipality}, {address.province}</p>
@@ -94,6 +94,13 @@ export default function UserDetails() {
           />
 
         </div>
+
+              <button
+          className="offer-service-btn"
+          onClick={() => navigate("/register-provider")}
+        >
+          OFFER SERVICE
+        </button>
 
         <hr />
 
@@ -115,10 +122,11 @@ export default function UserDetails() {
                   {processingBookings.map((booking) => (
                     <div key={booking._id} className="booking-card">
                       <p>
-                        Provider: {booking.providerId?.firstName || "N/A"}{" "}
-                        {booking.providerId?.lastName || ""}
+                        Provider: {booking.providerId?.firstName || "N/A"} {booking.providerId?.lastName || ""}
                       </p>
-                      <p>Service: {booking.serviceCategory}</p>
+                      <p>Email: {booking.providerId?.email || "N/A"}</p>
+                      <p>Phone: {booking.providerId?.phoneNumber || "N/A"}</p>
+                      <p>Service: {booking.providerId?.serviceCategory || "N/A"}</p>
                       <button onClick={() => cancelBooking(booking._id)}>Cancel</button>
                     </div>
                   ))}
@@ -168,8 +176,7 @@ export default function UserDetails() {
         <div className="financial-section">
           <h3>Financial Services</h3>
           <div className="financial-item">Cash on Delivery</div>
-          <div className="financial-item">QR Code <FontAwesomeIcon icon={faChevronRight} /></div>
-          <div className="financial-item">Refund <FontAwesomeIcon icon={faChevronRight} /></div>
+          <div className="financial-item">QR Code</div>
         </div>
 
         <hr />

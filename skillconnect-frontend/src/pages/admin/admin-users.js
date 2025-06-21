@@ -23,7 +23,7 @@ export default function AdminUsers() {
             <tr>
               <th style={{ borderBottom: "1px solid #ccc" }}>Name</th>
               <th style={{ borderBottom: "1px solid #ccc" }}>Email</th>
-              <th style={{ borderBottom: "1px solid #ccc" }}>Mobile</th>
+              <th style={{ borderBottom: "1px solid #ccc" }}>Phone Number</th>
               <th style={{ borderBottom: "1px solid #ccc" }}>Address</th>
             </tr>
           </thead>
@@ -32,7 +32,7 @@ export default function AdminUsers() {
               <tr key={user._id}>
                 <td>{user.firstName} {user.lastName}</td>
                 <td>{user.email}</td>
-                <td>{user.mobile}</td>
+                <td>{user.phoneNumber}</td>
                 <td>
                   {user.address?.street}, {user.address?.barangay}, {user.address?.cityMunicipality}, {user.address?.province}
                 </td>

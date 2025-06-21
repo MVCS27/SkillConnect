@@ -6,6 +6,7 @@ import './App.css';
 import UpdateUser from './components/update-user';
 
 import AccountVerify from './utils/account-verify'
+import PersonelInCharge from './utils/personel-incharge';
 
 import AdminDashboard from './pages/admin/admin-dashboard';
 import AdminProviders from './pages/admin/admin-providers';
@@ -70,6 +71,7 @@ function App() {
             <Route path="/admin-providers" element={<AdminProviders />} />
             <Route path="/admin-users" element={<AdminUsers />} />
             <Route path="/admin-bookings" element={<AdminBookings />} />
+            <Route path="/personel-incharge" element={<PersonelInCharge />} />
           </>
         </Route>
 

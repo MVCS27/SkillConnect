@@ -21,9 +21,9 @@ export default class UserSignUp extends Component {
       lastName: "",
       firstNameError: false,
       lastNameError: false,
-      mobile: "",
+      phoneNumber: "",
+      phoneNumberError: false,
       email: "",
-      mobileError: false,
       emailError: false,
       password: "",
       passwordError: false,
@@ -115,30 +115,29 @@ export default class UserSignUp extends Component {
           </div>
 
 
-            <div className="mb-3">
-            <label>Mobile Number</label>
+          <div className="mb-3">
+            <label>Phone Number</label>
             <input
               type="text"
               className="form-control"
-              placeholder="Mobile Number"
-              value={this.state.mobile}
+              placeholder="Phone Number"
+              value={this.state.phoneNumber}
               maxLength="11"
               inputMode="numeric"
               onChange={(e) => {
-                // Allow only digits
                 const value = e.target.value.replace(/\D/g, "");
-                this.setState({ mobile: value });
+                this.setState({ phoneNumber: value });
               }}
               onBlur={(e) => {
                 const value = e.target.value;
-                const isValidMobile = /^09\d{9}$/.test(value);
-                this.setState({ mobileError: !isValidMobile });
+                const isValidPhone = /^09\d{9}$/.test(value);
+                this.setState({ phoneNumberError: !isValidPhone });
               }}
               required
             />
-            {this.state.mobileError && (
+            {this.state.phoneNumberError && (
               <div style={{ color: "red", fontSize: "0.875rem" }}>
-                Mobile number must start with 09 and be exactly 11 digits
+                Phone number must start with 09 and be exactly 11 digits
               </div>
             )}
           </div>

@@ -6,7 +6,7 @@ import NavbarLogedInProvider from "../components/navbar-logedin-provider";
 import API_BASE_URL from "../config/api";
 
 export default function ProviderCalendar() {
-  const [selectedDates, setSelectedDates] = useState([]);
+  const [selectedDates, setSelectedDates] = useState([]); // Always an array
   const [selectedTimes, setSelectedTimes] = useState([]);
   const [message, setMessage] = useState("");
   const [unavailableSlots, setUnavailableSlots] = useState([]);
@@ -46,17 +46,22 @@ export default function ProviderCalendar() {
 
   // Get unavailable times for the selected date (if only one date is selected)
   const unavailableTimes = selectedDates.length === 1
-    ? (unavailableSlots.find(slot => slot.date === selectedDates[0].toISOString().split("T")[0])?.times || [])
+    ? (unavailableSlots.find(slot =>
+        slot.date === selectedDates[0]?.toISOString().split("T")[0]
+      )?.times || [])
     : [];
 
   // Save unavailable slots for all selected dates
   const handleSave = async () => {
-    if (selectedDates.length === 0 || selectedTimes.length === 0) {
+    if (!Array.isArray(selectedDates) || selectedDates.length === 0 || selectedTimes.length === 0) {
       setMessage("Please select at least one date and time.");
       return;
     }
     for (const dateObj of selectedDates) {
-      const dateStr = dateObj.toISOString().split("T")[0];
+      if (!(dateObj instanceof Date) || isNaN(dateObj)) continue; // skip invalid dates
+      const dateStr = dateObj.getFullYear() + "-" +
+        String(dateObj.getMonth() + 1).padStart(2, "0") + "-" +
+        String(dateObj.getDate()).padStart(2, "0");
       await fetch(`${API_BASE_URL}/provider/set-unavailable`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -115,10 +120,12 @@ export default function ProviderCalendar() {
         <h2>Set Unavailable Slots</h2>
         <DatePicker
           selected={selectedDates[0] || null}
-          onChange={dates => setSelectedDates(dates)}
-          dateFormat="yyyy/MM/dd"
-          className="date-picker"
+          onChange={dates => setSelectedDates(Array.isArray(dates) ? dates : [])}
           selectsMultiple
+          minDate={new Date()}
+          dayClassName={date =>
+            date < new Date().setHours(0,0,0,0) ? "react-datepicker__day--disabled" : undefined
+          }
           inline
         />
         <div className="time-options">

@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from "react";
 import NavbarAdmin from "../../components/navbar-admin";
+import API_BASE_URL from "../../config/api";
 
 export default function AdminProviders() {
   const [pending, setPending] = useState([]);
   const [verified, setVerified] = useState([]);
 
   useEffect(() => {
-    fetch("http://localhost:5001/businesses")
+    fetch(`${API_BASE_URL}/businesses`)
       .then(res => res.json())
       .then(data => {
         setPending(data.pending);
@@ -15,12 +16,12 @@ export default function AdminProviders() {
   }, []);
 
   const handleApprove = async (id, email) => {
-    await fetch("http://localhost:5001/admin/verify-business", {
+    await fetch(`${API_BASE_URL}/admin/verify-business`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ businessId: id }),
     });
-    await fetch("http://localhost:5001/admin/send-verification-email", {
+    await fetch(`${API_BASE_URL}/admin/send-verification-email`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, status: "success" }),
@@ -29,7 +30,7 @@ export default function AdminProviders() {
   };
 
   const handleReject = async (email) => {
-    await fetch("http://localhost:5001/admin/send-verification-email", {
+    await fetch(`${API_BASE_URL}/admin/send-verification-email`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, status: "failed" }),

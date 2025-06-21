@@ -9,7 +9,7 @@ export class Registry {
     component.state = {
       firstName: "",
       lastName: "",
-      mobile: "",
+      phoneNumber: "", // changed from mobile
       email: "",
       password: "",
       confirmPassword: "",
@@ -31,7 +31,7 @@ export class Registry {
   handleSubmit(e) {
     e.preventDefault();
 
-    const { firstName, lastName, mobile, email, password, confirmPassword, address  } = this.component.state;
+    const { firstName, lastName, phoneNumber, email, password, confirmPassword, address  } = this.component.state;
 
     // Validate password match
     if (password !== confirmPassword) {
@@ -48,16 +48,18 @@ export class Registry {
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      body: JSON.stringify({ firstName, lastName, username, mobile, email, password, address }),
+      body: JSON.stringify({ firstName, lastName, username, phoneNumber, email, password, address }),
     })
       .then((res) => res.json())
       .then((data) => {
-        console.log(data, "userRegister");
-
+        console.log("Registration response:", data);
         if (data.status === "success") {
-          window.location.href = "/account-verify";
+          // Redirect customers to their profile
+          window.location.href = "/sign-in?registered=success";
+        } else if (data.error === "Mobile Number Already Exists") {
+          alert("Mobile number already exists. Please use a different number.");
         } else {
-          alert("Registration failed. Please try again.");
+          alert("Registration failed. " + (data.error ? JSON.stringify(data.error) : "Please try again."));
         }
       })
       .catch((error) => {

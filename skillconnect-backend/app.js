@@ -1,12 +1,13 @@
 const express = require("express");
 const app = express();
+require("dotenv").config();
 
 const mongoose = require("mongoose");
-const mongoUrl = "mongodb+srv://sagunmarkvincent:mrfBFQu9PjFwOlTt@users.cxjs7.mongodb.net/Users";
+const mongoUrl = process.env.MONGO_URL; // Use env variable
 
 const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken")
-const JWT_SECRET = "qwertyuiop123567890asdfghjkl!@#$%^&*()_+zxcvbnm,./"
+const jwt = require("jsonwebtoken");
+const JWT_SECRET = process.env.JWT_SECRET; // Use env variable
 
 const cors = require("cors");
 const nodemailer = require("nodemailer");
@@ -24,9 +25,7 @@ app.use(cors({
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-mongoose.connect(mongoUrl,{
-    useNewUrlParser:true
-    })
+mongoose.connect(mongoUrl)
         .then(() => {console.log("Connected to database");
     })
         .catch((e) => console.log(e));
@@ -42,32 +41,34 @@ const Images = mongoose.model("images")
 //Booking Schema
 const Booking = mongoose.model("booking")
 
-//Customer Registry
+// Registration
 app.post("/register", async (req, res) => {
-    const { firstName, lastName, mobile, email, password, address  } = req.body;
-
-    //const username = `${firstName} ${lastName}`.trim(); // Combine firstName and lastName
+    const { firstName, lastName, phoneNumber, email, password, address } = req.body;
     const encryptedPassword = await bcrypt.hash(password, 10);
 
     try {
         const oldUser = await User.findOne({ email });
-
         if (oldUser) {
             return res.send({ error: "Email Already Exists" });
+        }
+
+        const oldPhone = await User.findOne({ phoneNumber });
+        if (oldPhone) {
+            return res.send({ error: "Phone Number Already Exists" });
         }
 
         await User.create({
             firstName,
             lastName,
             username: `${firstName} ${lastName}`,
-            mobile,
+            phoneNumber,
             email,
             password: encryptedPassword,
             address,
             userType: "customer",
         });
 
-        res.send({ status: "success!" });
+        res.send({ status: "success" });
     } catch (error) {
         console.error("Registration error:", error);
         res.send({ status: "error", error });
@@ -75,18 +76,27 @@ app.post("/register", async (req, res) => {
 });
 
 app.post("/updateUser", async (req, res) => {
-    const {id, firstName, lastName, mobile } = req.body;
+    const { id, firstName, lastName, phoneNumber, password, address, email } = req.body;
     try {
-        await User.updateOne({ _id: id}, {
-            $set: {
-                firstName: firstName,
-                lastName: lastName,
-                mobile: mobile,
-            }
-        })
-        return res.json({status: "ok", data: "updated"})
+        const updateFields = {
+            firstName,
+            lastName,
+            phoneNumber,
+            address,
+            // email, // Uncomment if you want to allow email change
+        };
+        if (password) {
+            const encryptedPassword = await bcrypt.hash(password, 10);
+            updateFields.password = encryptedPassword;
+        }
+        const result = await User.updateOne({ _id: id }, { $set: updateFields });
+        if (result.matchedCount === 0 && result.n === 0) {
+            return res.json({ status: "error", data: "User not found" });
+        }
+        // Always return success if the update query ran
+        return res.json({ status: "ok", data: "updated" });
     } catch (error) {
-         return res.json({status: "error", data: "error"})
+        return res.json({ status: "error", data: "error" });
     }
 })
 
@@ -102,10 +112,10 @@ app.post("/loginUser", async (req, res) => {
     const token = jwt.sign({ email: user.email }, JWT_SECRET, { expiresIn: "50m" });
 
     return res.status(201).json({
-        status: "success!",
+        status: "success",
         data: token,
         userType: user.userType,
-        isVerifiedBusiness: user.isVerifiedBusiness // <-- add this
+        isVerifiedBusiness: user.isVerifiedBusiness
     });
 });
 
@@ -130,17 +140,17 @@ app.post("/userData", async (req, res) => {
 // Get all business providers
 app.get("/providerList", async (req, res) => {
   try {
-    const providers = await User.find({ userType: "business" }).select(
-      "_id firstName lastName email mobile address serviceCategory"
+    const providers = await User.find({ userType: "business", isVerifiedBusiness: true }).select(
+      "_id firstName lastName email phoneNumber address serviceCategory"
     );
 
     const formatted = providers.map((provider) => ({
       _id: provider._id,
       firstName: provider.firstName,
       lastName: provider.lastName,
-      serviceCategory: provider.serviceCategory || "Service Provider", // <-- FIXED
+      serviceCategory: provider.serviceCategory || "Service Provider",
       email: provider.email,
-      mobile: provider.mobile,
+      phoneNumber: provider.phoneNumber, // <-- use only phoneNumber
       address: provider.address,
       distance: Math.floor(Math.random() * 5) + 1,
       image: `/images/${provider.governmentId || "default.jpg"}`,
@@ -157,18 +167,18 @@ app.get("/providerList", async (req, res) => {
 app.get("/provider/:id", async (req, res) => {
   try {
     const provider = await User.findById(req.params.id).select(
-      "_id firstName lastName email mobile address serviceCategory governmentId"
+      "_id firstName lastName email phoneNumber address serviceCategory governmentId"
     );
     if (!provider) {
       return res.status(404).json({ status: "error", error: "Provider not found" });
     }
 
     const formatted = {
-      _id: provider._id, // ✅ Include _id so frontend can book correctly
+      _id: provider._id,
       firstName: provider.firstName,
       lastName: provider.lastName,
       email: provider.email,
-      mobile: provider.mobile,
+      phoneNumber: provider.phoneNumber, // <-- use only phoneNumber
       serviceCategory: provider.serviceCategory || "Service Provider",
       address: provider.address,
       image: `/images/${provider.governmentId || "default.jpg"}`
@@ -189,10 +199,26 @@ app.post("/book", async (req, res) => {
   try {
     const booking = await Booking.create({ customerId, providerId, serviceCategory, date, time });
 
+    // Mark the time as unavailable for the provider
+    const user = await User.findById(providerId);
+    const slot = user.unavailableSlots.find(s => s.date === date);
+
+    if (slot) {
+      await User.updateOne(
+        { _id: providerId, "unavailableSlots.date": date },
+        { $addToSet: { "unavailableSlots.$.times": time } }
+      );
+    } else {
+      await User.updateOne(
+        { _id: providerId },
+        { $push: { unavailableSlots: { date, times: [time] } } }
+      );
+    }
+
     // Properly populate after creation
     const populatedBooking = await Booking.findById(booking._id)
-      .populate("providerId", "firstName lastName")
-      .populate("customerId", "firstName lastName");
+      .populate("providerId", "firstName lastName email phoneNumber serviceCategory")
+      .populate("customerId", "firstName lastName email phoneNumber");
 
     res.json({ status: "ok", data: populatedBooking });
   } catch (error) {
@@ -202,14 +228,16 @@ app.post("/book", async (req, res) => {
 });
 
 app.get("/bookings/customer/:id", async (req, res) => {
-  const bookings = await Booking.find({ customerId: req.params.id }).populate("providerId", "firstName lastName");
+  const bookings = await Booking.find({ customerId: req.params.id })
+  .populate("providerId", "firstName lastName email phoneNumber serviceCategory")
+  .populate("customerId", "firstName lastName email phoneNumber");
   res.json({ status: "ok", data: bookings });
 });
 
 app.get("/bookings/provider/:id", async (req, res) => {
   try {
     const bookings = await Booking.find({ providerId: req.params.id })
-      .populate("customerId", "firstName lastName"); // <-- make sure this line exists
+      .populate("customerId", "firstName lastName email phoneNumber serviceCategory"); // <-- make sure this line exists
     res.json({ status: "ok", data: bookings });
   } catch (error) {
     console.error("Error fetching bookings:", error);
@@ -246,10 +274,10 @@ app.post("/provider/set-unavailable", async (req, res) => {
           { $pull: { unavailableSlots: { date } } }
         );
       } else {
-        // Update the times for this date (replace with new times)
+        // Add new times to the existing array, avoiding duplicates
         await User.updateOne(
           { _id: providerId, "unavailableSlots.date": date },
-          { $set: { "unavailableSlots.$.times": times } }
+          { $addToSet: { "unavailableSlots.$.times": { $each: times } } }
         );
       }
     } else if (times.length > 0) {
@@ -281,7 +309,7 @@ const multer  = require('multer')
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, './src/images/')
+    cb(null, './images/')
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now();
@@ -302,7 +330,7 @@ app.post("/register-business", businessUpload, async (req, res) => {
   const {
     firstName,
     lastName,
-    mobile,
+    phoneNumber,
     email,
     password,
     address: addressStr,
@@ -355,11 +383,14 @@ app.post("/register-business", businessUpload, async (req, res) => {
     const oldUser = await User.findOne({ email });
     if (oldUser) return res.send({ error: "Email already exists" });
 
+    const oldPhone = await User.findOne({ phoneNumber });
+    if (oldPhone) return res.send({ error: "Phone Number Already Exists" });
+
     await User.create({
       firstName,
       lastName,
       username: `${firstName} ${lastName}`,
-      mobile,
+      phoneNumber,
       email,
       password: encryptedPassword,
       userType: "business",
@@ -404,7 +435,7 @@ app.post("/upload-image", upload.single("image"), async (req, res) => {
 const path = require("path");
 
 // Serve images from /src/images/
-app.use('/images', express.static(path.join(__dirname, 'src/images')));
+app.use('/images', express.static(path.join(__dirname, '/images')));
 
 app.get("/user-profile-image/:userId", async (req, res) => {
     try {
@@ -421,18 +452,11 @@ app.get("/user-profile-image/:userId", async (req, res) => {
 app.post("/send-admin-password", async (req, res) => {
   const { password } = req.body;
   try {
-    // Configure your email transport
-    let transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: "skillconnect12345@gmail.com", // replace with your Gmail
-        pass: "leye axqt plrd djwm" // use an App Password, not your Gmail password
-      }
-    });
+    let transporter = getTransporter();
 
     await transporter.sendMail({
-      from: '"SkillShare Admin" <your_gmail@gmail.com>',
-      to: "skillconnect12345@gmail.com",
+      from: '"SkillShare Admin" <' + process.env.EMAIL_USER + '>',
+      to: process.env.EMAIL_USER,
       subject: "Your Admin Login Password",
       text: `Your admin login password is: ${password}`,
     });
@@ -472,16 +496,10 @@ app.post("/admin/send-verification-email", async (req, res) => {
   }
 
   try {
-    let transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: "skillconnect12345@gmail.com",
-        pass: "leye axqt plrd djwm"
-      }
-    });
+    let transporter = getTransporter();
 
     await transporter.sendMail({
-      from: '"SkillShare Admin" <skillconnect12345@gmail.com>',
+      from: '"SkillShare Admin" <' + process.env.EMAIL_USER + '>',
       to: email,
       subject,
       text,
@@ -509,12 +527,73 @@ app.get("/admin/bookings", async (req, res) => {
   try {
     const bookings = await Booking.find()
       .populate("customerId", "firstName lastName email")
-      .populate("providerId", "firstName lastName email");
+      .populate("providerId", "firstName lastName email phoneNumber serviceCategory");
     res.json({ status: "ok", data: bookings });
   } catch (error) {
     res.status(500).json({ status: "error", error: "Failed to fetch bookings" });
   }
 });
+
+// Use multer for file upload
+const upload2 = multer({ dest: "uploads/" });
+
+app.post("/send-personel-incharge", upload2.single("image"), async (req, res) => {
+  const { description, bookingId } = req.body;
+  const imagePath = req.file ? req.file.path : null;
+
+  try {
+    // 1. Find the booking, customer, and provider
+    const booking = await Booking.findById(bookingId)
+      .populate("customerId", "email firstName lastName")
+      .populate("providerId", "email firstName lastName");
+    if (!booking || !booking.customerId || !booking.customerId.email || !booking.providerId || !booking.providerId.email) {
+      return res.status(404).json({ status: "error", error: "Booking, customer, or provider not found" });
+    }
+    const customerEmail = booking.customerId.email;
+    const providerEmail = booking.providerId.email;
+
+    // 2. Prepare email
+    let transporter = getTransporter();
+
+    let mailOptions = {
+      from: '"SkillConnect" <' + process.env.EMAIL_USER + '>',
+      to: [customerEmail, providerEmail],
+      subject: "Personnel In-Charge Details",
+      text: `Dear ${booking.customerId.firstName || "Customer"},\n\nPersonnel in-charge details:\n${description}`,
+      html: `<p>Dear ${booking.customerId.firstName || "Customer"},</p>
+             <p><b>Personnel in-charge details:</b></p>
+             <p>${description}</p>
+             ${imagePath ? `<img src="cid:personelphoto" style="max-width:300px; border-radius:8px;" />` : ""}`
+    };
+
+    // 3. Attach image if present
+    if (imagePath) {
+      mailOptions.attachments = [{
+        filename: req.file.originalname,
+        path: imagePath,
+        cid: "personelphoto"
+      }];
+    }
+
+    // 4. Send email
+    await transporter.sendMail(mailOptions);
+
+    res.json({ status: "ok" });
+  } catch (error) {
+    console.error("Failed to send personnel in-charge email:", error);
+    res.status(500).json({ status: "error", error: "Failed to send email" });
+  }
+});
+
+function getTransporter() {
+  return nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS
+    }
+  });
+}
 
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {

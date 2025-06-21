@@ -2,22 +2,37 @@
 
 # dependencies
 /node_modules
-/.pnp
-.pnp.js
 
-# testing
-/coverage
-
-# production
+# production build
 /build
 
-# misc
+# test coverage
+/coverage
+
+# misc logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
 .DS_Store
+Thumbs.db
+
+# dotenv environment variables
+.env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# IDE/project files
+.vscode/
+.idea/
+*.iml
+
+# Optional: ignore uploaded images or test files if you don't want them in git
+/src/assets/images/
+/src/tests/
+
+# Optional: ignore any custom local config files
+*.local.js

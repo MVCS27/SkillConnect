@@ -5,3 +5,9 @@
   height: 100%;
   margin: 10em 6em;
 }
+
+.react-datepicker__day--disabled {
+  color: #ccc !important;
+  pointer-events: none;
+  background: #f0f0f0 !important;
+}

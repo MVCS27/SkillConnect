@@ -10,7 +10,7 @@ export class RegistryBusiness {
       component.state = {
         firstName: "",
         lastName: "",
-        mobile: "",
+        phoneNumber: "", // changed from mobile
         email: "",
         password: "",
         confirmPassword: "",
@@ -40,7 +40,7 @@ export class RegistryBusiness {
     const {
       firstName,
       lastName,
-      mobile,
+      phoneNumber,
       email,
       password,
       confirmPassword,
@@ -63,7 +63,7 @@ export class RegistryBusiness {
     formData.append("username", username);
     formData.append("firstName", firstName);
     formData.append("lastName", lastName);
-    formData.append("mobile", mobile);
+    formData.append("phoneNumber", phoneNumber); // changed from mobile
     formData.append("email", email);
     formData.append("password", password);
     formData.append("serviceCategory", serviceCategory);
@@ -87,7 +87,7 @@ export class RegistryBusiness {
         console.log(data, "businessRegister");
 
         // Update this line based on actual backend value
-        if (data.status === "success!" || data.status === "success") {
+        if (data.status === "success") {
           window.location.href = "/account-verify";
         } else {
           alert("Registration failed. " + (data.error || "Unknown error."));

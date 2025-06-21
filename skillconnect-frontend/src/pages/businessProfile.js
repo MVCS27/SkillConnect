@@ -2,9 +2,11 @@ import React, { useEffect, useState } from "react";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faGear, faFileLines, faRightFromBracket, faChevronRight, faPenToSquare, faCheckCircle, faSyncAlt, faHourglassHalf } from "@fortawesome/free-solid-svg-icons";
 import { useNavigate } from "react-router-dom";
+import PersonelInCharge from "../utils/personel-incharge";
 
 import NavbarLogedInProvider from "../components/navbar-logedin-provider";
 import { logOutUser } from "../controllers/logout";
+import API_BASE_URL from "../config/api";
 
 import "../assets/styles/profile.css";
 
@@ -12,12 +14,14 @@ export default function UserDetails() {
   const [userData, setUserData] = useState({});
   const [incomingBookings, setIncomingBookings] = useState([]);
   const [profileImage, setProfileImage] = useState(null);
+  const [showPersonnelModal, setShowPersonnelModal] = useState(false);
+  const [selectedBookingId, setSelectedBookingId] = useState(null);
 
   const navigate = useNavigate();
-  const { firstName, lastName, email, mobile, address = {} } = userData;
+  const { firstName, lastName, email, phoneNumber, address = {} } = userData;
 
   const updateStatus = async (bookingId, newStatus) => {
-    const res = await fetch(`http://localhost:5001/bookings/update`, {
+    const res = await fetch(`${API_BASE_URL}/bookings/update`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ bookingId, status: newStatus }),
@@ -29,12 +33,15 @@ export default function UserDetails() {
           b._id === bookingId ? { ...b, status: newStatus } : b
         )
       );
+      // Redirect to personel-incharge if accepted
+      if (newStatus === "ongoing") {
+        navigate("/personel-incharge", { state: { bookingId } });
+      }
     }
   };
 
-
   useEffect(() => {
-    fetch("http://localhost:5001/userData", {
+    fetch(`${API_BASE_URL}/userData`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -45,14 +52,14 @@ export default function UserDetails() {
     })
       .then((res) => res.json())
       .then((data) => {
-        console.log(data, "userData");
         setUserData(data.data);
 
         if (data.data === "token expired") {
           alert("Token expired, login again");
           logOutUser();
-        } if (data.data && data.data._id) {
-          fetch(`http://localhost:5001/bookings/provider/${data.data._id}`)
+        } 
+        if (data.data && data.data._id) {
+          fetch(`${API_BASE_URL}/bookings/provider/${data.data._id}`)
             .then((res) => res.json())
             .then((bookingData) => {
               if (bookingData.status === "ok") {
@@ -60,11 +67,11 @@ export default function UserDetails() {
               }
             });
 
-            fetch(`http://localhost:5001/user-profile-image/${data.data._id}`)
+          fetch(`${API_BASE_URL}/user-profile-image/${data.data._id}`)
             .then(res => res.json())
             .then(imgData => {
               if (imgData.status === "ok" && imgData.image) {
-                setProfileImage(`http://localhost:5001/images/${imgData.image}`);
+                setProfileImage(`${API_BASE_URL}/images/${imgData.image}`);
               }
             });
         }
@@ -84,7 +91,7 @@ export default function UserDetails() {
 
            <div className="user-text">
             <h2>{firstName} {lastName}</h2>
-            <p>{mobile}</p>
+            <p>{phoneNumber}</p>
             <p>{email}</p>
             <p>{address.street}, {address.barangay}</p>
             <p>{address.cityMunicipality}, {address.province}</p>
@@ -97,8 +104,6 @@ export default function UserDetails() {
           />
 
         </div>
-
-        <button className="offer-service-btn">OFFER SERVICE</button>
 
         <hr />
 
@@ -122,11 +127,14 @@ export default function UserDetails() {
                     {processingBookings.map((booking) => (
                       <div key={booking._id} className="booking-card">
                         <p>
-                          Customer: {booking.customerId?.firstName || "Unknown"}{" "}
-                          {booking.customerId?.lastName || ""}
+                          Customer: {booking.customerId?.firstName || "N/A"} {booking.customerId?.lastName || ""}
                         </p>
-                        <p>Service: {booking.serviceCategory}</p>
-                        <button onClick={() => updateStatus(booking._id, "ongoing")}>
+                        <p>Email: {booking.customerId?.email || "N/A"}</p>
+                        <p>Phone: {booking.customerId?.phoneNumber || "N/A"}</p>
+                        <button onClick={() => {
+                          setSelectedBookingId(booking._id);
+                          setShowPersonnelModal(true);
+                        }}>
                           Accept
                         </button>
                         <button onClick={() => updateStatus(booking._id, "refused")}>
@@ -156,6 +164,8 @@ export default function UserDetails() {
                     {ongoingBookings.map((b) => (
                       <div key={b._id} className="booking-card">
                         <p>Customer: {b.customerId?.firstName || "N/A"} {b.customerId?.lastName || ""}</p>
+                        <p>Email: {b.customerId?.email || "N/A"}</p>
+                        <p>Phone: {b.customerId?.phoneNumber || "N/A"}</p>
                         <p>Service: {b.serviceCategory}</p>
                       </div>
                     ))}
@@ -182,8 +192,7 @@ export default function UserDetails() {
         <div className="financial-section">
           <h3>Financial Services</h3>
           <div className="financial-item">Cash on Delivery</div>
-          <div className="financial-item">QR Code <FontAwesomeIcon icon={faChevronRight} /></div>
-          <div className="financial-item">Refund <FontAwesomeIcon icon={faChevronRight} /></div>
+          <div className="financial-item">QR Code</div>
         </div>
 
         <hr />
@@ -201,6 +210,27 @@ export default function UserDetails() {
           <FontAwesomeIcon icon={faRightFromBracket} />
         </div>
       </div>
+
+      {showPersonnelModal && (
+        <div className="modal-overlay" style={{
+          position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh",
+          background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000
+        }}>
+          <div style={{ position: "relative" }}>
+            <button
+              onClick={() => setShowPersonnelModal(false)}
+              style={{
+                position: "absolute", top: 8, right: 8, background: "none", border: "none", fontSize: 22, cursor: "pointer", zIndex: 1001
+              }}
+              aria-label="Close"
+            >×</button>
+            <PersonelInCharge
+              bookingId={selectedBookingId}
+              onSuccess={() => setShowPersonnelModal(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
