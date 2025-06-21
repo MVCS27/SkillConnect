@@ -19,7 +19,8 @@ app.use(express.json());
 const allowedOrigins = [
   "http://localhost:3000",
   "https://skill-connect-git-main-mark-vincents-projects.vercel.app",
-  "https://skill-connect-epz1sxqg8-mark-vincents-projects.vercel.app"
+  "https://skill-connect-epz1sxqg8-mark-vincents-projects.vercel.app",
+  "https://skill-share-sand.vercel.app" // <-- add this line
 ];
 
 app.use(cors({
