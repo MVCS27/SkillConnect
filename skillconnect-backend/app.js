@@ -11,6 +11,8 @@ const JWT_SECRET = process.env.JWT_SECRET; // Use env variable
 
 const cors = require("cors");
 const nodemailer = require("nodemailer");
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
 app.use(express.json());
 
@@ -307,13 +309,17 @@ app.get("/provider/:id/unavailable", async (req, res) => {
 
 const multer  = require('multer')
 
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, './images/')
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now();
-    cb(null, uniqueSuffix + file.originalname);
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'skillconnect_uploads',
+    allowed_formats: ['jpg', 'png', 'jpeg', 'pdf'],
   },
 });
 
@@ -534,10 +540,8 @@ app.get("/admin/bookings", async (req, res) => {
   }
 });
 
-// Use multer for file upload
-const upload2 = multer({ dest: "uploads/" });
-
-app.post("/send-personel-incharge", upload2.single("image"), async (req, res) => {
+// Update /send-personel-incharge to use Cloudinary storage
+app.post("/send-personel-incharge", upload.single("image"), async (req, res) => {
   const { description, bookingId } = req.body;
   const imagePath = req.file ? req.file.path : null;
 
