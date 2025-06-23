@@ -45,7 +45,7 @@ export default function AdminProviders() {
         <h2 style={{ color: "#d4a017" }}>Pending Business Approvals</h2>
         {pending.length === 0 && <div style={{ color: "#888" }}>No pending providers.</div>}
         {pending.map(biz => (
-          <div key={biz._id} style={{
+          <div key={biz.id} style={{
             border: "1px solid #eee",
             borderRadius: 8,
             margin: "1rem 0",
@@ -62,7 +62,7 @@ export default function AdminProviders() {
               ))}
             </ul>
             <button
-              onClick={() => handleApprove(biz._id, biz.email)}
+              onClick={() => handleApprove(biz.id, biz.email)}
               style={{
                 background: "#28a745",
                 color: "#fff",
@@ -94,7 +94,7 @@ export default function AdminProviders() {
         <h2 style={{ color: "#28a745", marginTop: 40 }}>Verified Businesses</h2>
         {verified.length === 0 && <div style={{ color: "#888" }}>No verified providers.</div>}
         {verified.map(biz => (
-          <div key={biz._id} style={{
+          <div key={biz.id} style={{
             border: "1px solid #e0ffe0",
             borderRadius: 8,
             margin: "1rem 0",

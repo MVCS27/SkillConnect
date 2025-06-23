@@ -29,7 +29,7 @@ export default function ProviderCalendar() {
       .then(res => res.json())
       .then(data => {
         if (data.status === "ok" && data.data && data.data._id) {
-          setProviderId(data.data._id);
+          setProviderId(data.data._id); // <-- use _id
         }
       });
   }, []);

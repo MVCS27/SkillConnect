@@ -21,7 +21,7 @@ export default function ProviderList() {
 
           // Fetch images for each provider
           data.data.forEach((provider) => {
-            fetch(`${API_BASE_URL}/user-profile-image/${provider._id}`)
+            fetch(`${API_BASE_URL}/user-profile-image/${provider._id}`) // <-- use _id
               .then((res) => res.json())
               .then((imgData) => {
                 setProviderImages((prev) => ({
@@ -39,8 +39,39 @@ export default function ProviderList() {
       });
   }, []);
 
-  const handleClick = (id) => {
-    navigate(`/provider-details/${id}`);
+  const handleClick = (_id) => {
+    navigate(`/provider-details/${_id}`); // <-- use _id
+  };
+
+  const handleBookNow = (provider) => {
+    const customerData = JSON.parse(localStorage.getItem("customerData"));
+    const dateStr = new Date().toISOString().split("T")[0]; // Current date in YYYY-MM-DD format
+    const selectedTime = "10:00"; // Example static time, replace with your logic
+
+    fetch(`${API_BASE_URL}/bookService`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        customerId: customerData._id, // <-- use _id
+        providerId: provider._id,     // <-- use _id
+        serviceCategory: provider.serviceCategory,
+        date: dateStr,
+        time: selectedTime,
+      }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.status === "ok") {
+          alert("Service booked successfully!");
+        } else {
+          alert("Error booking service: " + data.message);
+        }
+      })
+      .catch((err) => {
+        console.error("Error booking service:", err);
+      });
   };
 
   return (
@@ -51,7 +82,7 @@ export default function ProviderList() {
           <div
             key={index}
             className="provider-card"
-            onClick={() => handleClick(provider._id)}
+            onClick={() => handleClick(provider._id)} // <-- use _id
           >
             <img
               src={providerImages[provider._id] || "https://placehold.co/100x100?text=No+Image"}
@@ -60,6 +91,7 @@ export default function ProviderList() {
             />
             <p className="provider-name">{provider.firstName} {provider.lastName}</p>
             <p className="provider-service">{provider.serviceCategory}</p>
+            <button onClick={() => handleBookNow(provider)}>Book Now</button>
           </div>
         ))}
       </div>

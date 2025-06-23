@@ -3,16 +3,17 @@ const app = express();
 require("dotenv").config();
 
 const mongoose = require("mongoose");
-const mongoUrl = process.env.MONGO_URL; // Use env variable
+const mongoUrl = process.env.MONGO_URL;
 
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const JWT_SECRET = process.env.JWT_SECRET; // Use env variable
+const JWT_SECRET = process.env.JWT_SECRET;
 
 const cors = require("cors");
 const nodemailer = require("nodemailer");
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const { v4: uuidv4 } = require('uuid');
 
 app.use(express.json());
 
@@ -20,7 +21,7 @@ const allowedOrigins = [
   "http://localhost:3000",
   "https://skill-connect-git-main-mark-vincents-projects.vercel.app",
   "https://skill-connect-epz1sxqg8-mark-vincents-projects.vercel.app",
-  "https://skill-share-sand.vercel.app" // <-- add this line
+  "https://skill-share-sand.vercel.app"
 ];
 
 app.use(cors({
@@ -33,25 +34,45 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 mongoose.connect(mongoUrl)
-        .then(() => {console.log("Connected to database");
-    })
+        .then(() => {console.log("Connected to database");})
         .catch((e) => console.log(e));
 
 require("./models/userDetails");
 require("./models/imageDetails");
 require("./models/booking")
 
-//Clien Schema
 const User = mongoose.model("users");
-//Image Schema
 const Images = mongoose.model("images")
-//Booking Schema
 const Booking = mongoose.model("booking")
 
-// Registration
+// Cloudinary config using .env
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'skillconnect_uploads',
+    allowed_formats: ['jpg', 'png', 'jpeg', 'pdf'],
+  },
+});
+
+const upload = require('multer')({ storage: storage });
+
+const businessUpload = upload.fields([
+  { name: "nbiClearance", maxCount: 1 },
+  { name: "barangayClearance", maxCount: 1 },
+  { name: "certificate", maxCount: 1 },
+  { name: "governmentId", maxCount: 1 },
+]);
+
+// Registration (add _id generation)
 app.post("/register", async (req, res) => {
     const { firstName, lastName, phoneNumber, email, password, address } = req.body;
-    const encryptedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     try {
         const oldUser = await User.findOne({ email });
@@ -64,18 +85,20 @@ app.post("/register", async (req, res) => {
             return res.send({ error: "Phone Number Already Exists" });
         }
 
+        const _id = uuidv4();
         await User.create({
+            _id,
             firstName,
             lastName,
             username: `${firstName} ${lastName}`,
             phoneNumber,
             email,
-            password: encryptedPassword,
+            hashedPassword,
             address,
             userType: "customer",
         });
 
-        res.send({ status: "success" });
+        res.send({ status: "success", _id });
     } catch (error) {
         console.error("Registration error:", error);
         res.send({ status: "error", error });
@@ -83,24 +106,22 @@ app.post("/register", async (req, res) => {
 });
 
 app.post("/updateUser", async (req, res) => {
-    const { id, firstName, lastName, phoneNumber, password, address, email } = req.body;
+    const { _id, firstName, lastName, phoneNumber, password, address } = req.body;
     try {
         const updateFields = {
             firstName,
             lastName,
             phoneNumber,
             address,
-            // email, // Uncomment if you want to allow email change
         };
         if (password) {
-            const encryptedPassword = await bcrypt.hash(password, 10);
-            updateFields.password = encryptedPassword;
+            const hashedPassword = await bcrypt.hash(password, 10);
+            updateFields.hashedPassword = hashedPassword;
         }
-        const result = await User.updateOne({ _id: id }, { $set: updateFields });
+        const result = await User.updateOne({ _id }, { $set: updateFields });
         if (result.matchedCount === 0 && result.n === 0) {
             return res.json({ status: "error", data: "User not found" });
         }
-        // Always return success if the update query ran
         return res.json({ status: "ok", data: "updated" });
     } catch (error) {
         return res.json({ status: "error", data: "error" });
@@ -113,7 +134,10 @@ app.post("/loginUser", async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) return res.send({ error: "User Not Found" });
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    const hashed = user.hashedPassword;
+    if (!hashed) return res.status(400).json({ status: "error", error: "No password set for user" });
+
+    const isPasswordValid = await bcrypt.compare(password, hashed);
     if (!isPasswordValid) return res.status(400).json({ status: "error", error: "Invalid Password" });
 
     const token = jwt.sign({ email: user.email }, JWT_SECRET, { expiresIn: "50m" });
@@ -131,7 +155,7 @@ app.post("/userData", async (req, res) => {
   const { token } = req.body;
 
   try {
-    const user = jwt.verify(token, JWT_SECRET); // ✅ no callback here
+    const user = jwt.verify(token, JWT_SECRET);
     const userEmail = user.email;
 
     const userData = await User.findOne({ email: userEmail });
@@ -147,18 +171,18 @@ app.post("/userData", async (req, res) => {
 // Get all business providers
 app.get("/providerList", async (req, res) => {
   try {
-    const providers = await User.find({ userType: "business", isVerifiedBusiness: true }).select(
+    const providers = await User.find({ userType: "business", isVerifiedBusiness: { $ne: false } }).select(
       "_id firstName lastName email phoneNumber address serviceCategory"
     );
 
     const formatted = providers.map((provider) => ({
       _id: provider._id,
-      firstName: provider.firstName,
-      lastName: provider.lastName,
+      firstName: provider.firstName || "",
+      lastName: provider.lastName || "",
       serviceCategory: provider.serviceCategory || "Service Provider",
-      email: provider.email,
-      phoneNumber: provider.phoneNumber, // <-- use only phoneNumber
-      address: provider.address,
+      email: provider.email || "",
+      phoneNumber: provider.phoneNumber || "",
+      address: provider.address || {},
       distance: Math.floor(Math.random() * 5) + 1,
       image: `/images/${provider.governmentId || "default.jpg"}`,
     }));
@@ -170,10 +194,9 @@ app.get("/providerList", async (req, res) => {
   }
 });
 
-// Get specific business details from id
 app.get("/provider/:id", async (req, res) => {
   try {
-    const provider = await User.findById(req.params.id).select(
+    const provider = await User.findOne({ _id: req.params.id }).select(
       "_id firstName lastName email phoneNumber address serviceCategory governmentId"
     );
     if (!provider) {
@@ -182,12 +205,12 @@ app.get("/provider/:id", async (req, res) => {
 
     const formatted = {
       _id: provider._id,
-      firstName: provider.firstName,
-      lastName: provider.lastName,
-      email: provider.email,
-      phoneNumber: provider.phoneNumber, // <-- use only phoneNumber
+      firstName: provider.firstName || "",
+      lastName: provider.lastName || "",
+      email: provider.email || "",
+      phoneNumber: provider.phoneNumber || "",
       serviceCategory: provider.serviceCategory || "Service Provider",
-      address: provider.address,
+      address: provider.address || {},
       image: `/images/${provider.governmentId || "default.jpg"}`
     };
 
@@ -204,10 +227,11 @@ app.post("/book", async (req, res) => {
   const { customerId, providerId, serviceCategory, date, time } = req.body;
 
   try {
-    const booking = await Booking.create({ customerId, providerId, serviceCategory, date, time });
+    const bookingId = uuidv4();
+    const booking = await Booking.create({ _id: bookingId, customerId, providerId, serviceCategory, date, time });
 
     // Mark the time as unavailable for the provider
-    const user = await User.findById(providerId);
+    const user = await User.findOne({ _id: providerId });
     const slot = user.unavailableSlots.find(s => s.date === date);
 
     if (slot) {
@@ -222,12 +246,7 @@ app.post("/book", async (req, res) => {
       );
     }
 
-    // Properly populate after creation
-    const populatedBooking = await Booking.findById(booking._id)
-      .populate("providerId", "firstName lastName email phoneNumber serviceCategory")
-      .populate("customerId", "firstName lastName email phoneNumber");
-
-    res.json({ status: "ok", data: populatedBooking });
+    res.json({ status: "ok", data: booking });
   } catch (error) {
     console.error("Booking error:", error);
     res.status(500).json({ status: "error", error: "Booking failed" });
@@ -236,15 +255,14 @@ app.post("/book", async (req, res) => {
 
 app.get("/bookings/customer/:id", async (req, res) => {
   const bookings = await Booking.find({ customerId: req.params.id })
-  .populate("providerId", "firstName lastName email phoneNumber serviceCategory")
-  .populate("customerId", "firstName lastName email phoneNumber");
+    .populate("providerId", "firstName lastName email phoneNumber serviceCategory");
   res.json({ status: "ok", data: bookings });
 });
 
 app.get("/bookings/provider/:id", async (req, res) => {
   try {
     const bookings = await Booking.find({ providerId: req.params.id })
-      .populate("customerId", "firstName lastName email phoneNumber serviceCategory"); // <-- make sure this line exists
+      .populate("customerId", "firstName lastName email phoneNumber");
     res.json({ status: "ok", data: bookings });
   } catch (error) {
     console.error("Error fetching bookings:", error);
@@ -256,39 +274,33 @@ app.post("/bookings/update", async (req, res) => {
   const { bookingId, status } = req.body;
 
   try {
-    await Booking.findByIdAndUpdate(bookingId, { status });
+    await Booking.updateOne({ _id: bookingId }, { status });
     res.json({ status: "ok" });
   } catch (error) {
     res.status(500).json({ status: "error", error: "Failed to update status" });
   }
 });
 
-// For Callendar Booking
-// app.js (backend route)
-
-// For Calendar Booking - FIXED (only one version remains)
+// For Calendar Booking
 app.post("/provider/set-unavailable", async (req, res) => {
   const { providerId, date, times } = req.body;
   try {
-    const user = await User.findById(providerId);
+    const user = await User.findOne({ _id: providerId });
     const slot = user.unavailableSlots.find(s => s.date === date);
 
     if (slot) {
       if (times.length === 0) {
-        // Remove the slot for this date if no times left
         await User.updateOne(
           { _id: providerId },
           { $pull: { unavailableSlots: { date } } }
         );
       } else {
-        // Add new times to the existing array, avoiding duplicates
         await User.updateOne(
           { _id: providerId, "unavailableSlots.date": date },
           { $addToSet: { "unavailableSlots.$.times": { $each: times } } }
         );
       }
     } else if (times.length > 0) {
-      // Add new date with times if not existing
       await User.updateOne(
         { _id: providerId },
         { $push: { unavailableSlots: { date, times } } }
@@ -302,7 +314,7 @@ app.post("/provider/set-unavailable", async (req, res) => {
 
 app.get("/provider/:id/unavailable", async (req, res) => {
   try {
-    const provider = await User.findById(req.params.id).select("unavailableSlots");
+    const provider = await User.findOne({ _id: req.params.id }).select("unavailableSlots");
     res.json({ status: "ok", data: provider.unavailableSlots || [] });
   } catch (error) {
     res.status(500).json({ status: "error", error: "Failed to fetch unavailable slots" });
@@ -312,31 +324,7 @@ app.get("/provider/:id/unavailable", async (req, res) => {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 
-const multer  = require('multer')
-
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
-
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
-    folder: 'skillconnect_uploads',
-    allowed_formats: ['jpg', 'png', 'jpeg', 'pdf'],
-  },
-});
-
-const upload = multer({ storage: storage });
-
-const businessUpload = upload.fields([
-  { name: "nbiClearance", maxCount: 1 },
-  { name: "barangayClearance", maxCount: 1 },
-  { name: "certificate", maxCount: 1 },
-  { name: "governmentId", maxCount: 1 },
-]);
-
+// Registration for business (add _id generation)
 app.post("/register-business", businessUpload, async (req, res) => {
   const {
     firstName,
@@ -355,10 +343,9 @@ app.post("/register-business", businessUpload, async (req, res) => {
     return res.send({ status: "error", error: "Invalid address format" });
   }
 
-  const encryptedPassword = await bcrypt.hash(password, 10);
+  const hashedPassword = await bcrypt.hash(password, 10);
   const files = req.files;
 
-  // Prepare verificationDocuments array with correct documentType and fileReference
   const verificationDocuments = [
     {
       documentType: "nbi_clearance",
@@ -397,88 +384,30 @@ app.post("/register-business", businessUpload, async (req, res) => {
     const oldPhone = await User.findOne({ phoneNumber });
     if (oldPhone) return res.send({ error: "Phone Number Already Exists" });
 
+    const _id = uuidv4();
     await User.create({
+      _id,
       firstName,
       lastName,
       username: `${firstName} ${lastName}`,
       phoneNumber,
       email,
-      password: encryptedPassword,
+      hashedPassword,
       userType: "business",
       address,
       serviceCategory,
       verificationDocuments,
-      isVerifiedBusiness: false, // Always false for new business
-      // nbiClearance, barangayClearance, certificate, governmentId REMOVED
+      isVerifiedBusiness: false,
     });
 
-    res.send({ status: "success" });
+    res.send({ status: "success", _id });
   } catch (err) {
     console.error(err);
     res.send({ status: "error", error: err });
   }
 });
 
-
-// Image upload endpoint
-app.get("/get-images", async (req, res) => {
-    try {
-        await Images.find({}).then(data => {
-            res.send ({ status: "ok", data: data})
-        })
-    } catch (error) {
-        res.json({status: error});
-    }
-})
-
-app.post("/upload-image", upload.single("image"), async (req, res) => {
-    const imageName = req.file.filename;
-    const { userId } = req.body; // <-- get userId
-
-    try {
-        await Images.create({ image: imageName, userId }); // <-- store userId
-        res.json({ status: "ok", image: imageName });
-    } catch (error) {
-        res.json({ status: "error", error });
-    }
-});
-
-const path = require("path");
-
-// Serve images from /src/images/
-app.use('/images', express.static(path.join(__dirname, '/images')));
-
-app.get("/user-profile-image/:userId", async (req, res) => {
-    try {
-        const img = await Images.findOne({ userId: req.params.userId }).sort({ _id: -1 });
-        if (!img) return res.json({ status: "not_found" });
-        res.json({ status: "ok", image: img.image });
-    } catch (error) {
-        res.json({ status: "error", error });
-    }
-});
-
-///////////////////////////////////
-//Admin
-app.post("/send-admin-password", async (req, res) => {
-  const { password } = req.body;
-  try {
-    let transporter = getTransporter();
-
-    await transporter.sendMail({
-      from: '"SkillShare Admin" <' + process.env.EMAIL_USER + '>',
-      to: process.env.EMAIL_USER,
-      subject: "Your Admin Login Password",
-      text: `Your admin login password is: ${password}`,
-    });
-
-    res.json({ status: "ok" });
-  } catch (error) {
-    console.error("Failed to send admin password:", error);
-    res.json({ status: "error" });
-  }
-});
-
+// Admin endpoints
 app.post("/admin/verify-business", async (req, res) => {
   const { businessId } = req.body;
   try {
@@ -489,10 +418,76 @@ app.post("/admin/verify-business", async (req, res) => {
   }
 });
 
+// Get all customers (users with userType "customer")
+app.get("/admin/customers", async (req, res) => {
+  try {
+    const customers = await User.find({ userType: "customer" });
+    res.json({ status: "ok", data: customers });
+  } catch (error) {
+    res.status(500).json({ status: "error", error: "Failed to fetch customers" });
+  }
+});
+
+// Get all businesses (pending and verified)
 app.get("/businesses", async (req, res) => {
-  const pending = await User.find({ userType: "business", isVerifiedBusiness: false });
-  const verified = await User.find({ userType: "business", isVerifiedBusiness: true });
-  res.json({ pending, verified });
+  try {
+    const allBusinesses = await User.find({ userType: "business" });
+    const pending = allBusinesses.filter(biz => !biz.isVerifiedBusiness);
+    const verified = allBusinesses.filter(biz => biz.isVerifiedBusiness);
+    res.json({
+      pending: pending.map(biz => ({
+        id: biz._id, // frontend expects "id"
+        ...biz._doc
+      })),
+      verified: verified.map(biz => ({
+        id: biz._id, // frontend expects "id"
+        ...biz._doc
+      }))
+    });
+  } catch (error) {
+    res.status(500).json({ status: "error", error: "Failed to fetch businesses" });
+  }
+});
+
+// Get all bookings
+app.get("/admin/bookings", async (req, res) => {
+  try {
+    // Populate customer and provider info for display
+    const bookings = await Booking.find()
+      .populate("customerId", "firstName lastName")
+      .populate("providerId", "firstName lastName");
+    res.json({ status: "ok", data: bookings });
+  } catch (error) {
+    res.status(500).json({ status: "error", error: "Failed to fetch bookings" });
+  }
+});
+
+app.post("/send-admin-password", async (req, res) => {
+  const { password } = req.body;
+
+  // Use .env credentials
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: process.env.EMAIL_USER, // Use admin email from .env
+    subject: "SkillConnect Admin Login Password",
+    text: `Your admin login password is: ${password}`,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    res.json({ status: "ok" });
+  } catch (error) {
+    console.error("Failed to send admin password:", error);
+    res.status(500).json({ status: "error", error: "Failed to send email" });
+  }
 });
 
 app.post("/admin/send-verification-email", async (req, res) => {
@@ -523,26 +518,26 @@ app.post("/admin/send-verification-email", async (req, res) => {
   }
 });
 
-// Get all customers (userType: "customer")
-app.get("/admin/customers", async (req, res) => {
-  try {
-    const customers = await User.find({ userType: "customer" }).select("-password");
-    res.json({ status: "ok", data: customers });
-  } catch (error) {
-    res.status(500).json({ status: "error", error: "Failed to fetch customers" });
-  }
+// Images
+app.post("/upload-image", upload.single("image"), async (req, res) => {
+    const imageName = req.file.filename;
+    const { userId } = req.body;
+    try {
+        await Images.create({ image: imageName, userId });
+        res.json({ status: "ok", image: imageName });
+    } catch (error) {
+        res.json({ status: "error", error });
+    }
 });
 
-// Get all bookings
-app.get("/admin/bookings", async (req, res) => {
-  try {
-    const bookings = await Booking.find()
-      .populate("customerId", "firstName lastName email")
-      .populate("providerId", "firstName lastName email phoneNumber serviceCategory");
-    res.json({ status: "ok", data: bookings });
-  } catch (error) {
-    res.status(500).json({ status: "error", error: "Failed to fetch bookings" });
-  }
+app.get("/user-profile-image/:userId", async (req, res) => {
+    try {
+        const img = await Images.findOne({ userId: req.params.userId }).sort({ _id: -1 });
+        if (!img) return res.json({ status: "not_found" });
+        res.json({ status: "ok", image: img.image });
+    } catch (error) {
+        res.json({ status: "error", error });
+    }
 });
 
 // Update /send-personel-incharge to use Cloudinary storage
@@ -562,7 +557,13 @@ app.post("/send-personel-incharge", upload.single("image"), async (req, res) => 
     const providerEmail = booking.providerId.email;
 
     // 2. Prepare email
-    let transporter = getTransporter();
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
 
     let mailOptions = {
       from: '"SkillConnect" <' + process.env.EMAIL_USER + '>',
@@ -594,15 +595,15 @@ app.post("/send-personel-incharge", upload.single("image"), async (req, res) => 
   }
 });
 
-function getTransporter() {
-  return nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS
-    }
-  });
-}
+// Retrieve user by _id (string)
+app.get("/user/by-id/:id", async (req, res) => {
+  const { id } = req.params;
+  const user = await User.findOne({ _id: id });
+  if (!user) {
+    return res.status(404).json({ status: "error", error: "User not found" });
+  }
+  res.json({ status: "ok", data: user });
+});
 
 app.get("/", (req, res) => {
   res.send("SkillConnect backend is running!");

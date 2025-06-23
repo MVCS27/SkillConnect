@@ -2,10 +2,11 @@ const mongoose = require("mongoose");
 
 const UserDetailsSchema = new mongoose.Schema(
   {
+    _id: { type: String, required: true }, // string _id as primary key
     username: String,
-    phoneNumber: { type: String, unique: true }, // <-- change here
+    phoneNumber: { type: String, unique: true },
     email: { type: String, unique: true },
-    password: String,
+    hashedPassword: String,
     userType: {
       type: String,
       enum: ['customer', 'business'],
@@ -30,9 +31,9 @@ const UserDetailsSchema = new mongoose.Schema(
     },
     verificationDocuments: [
       {
-        documentType: String, // e.g. "nbi_clearance", "barangay_clearance", "government_id", "training_certificate"
-        fileReference: String, // file path or filename
-        status: String, // e.g. "uploaded"
+        documentType: String,
+        fileReference: String,
+        status: String,
       }
     ],
 

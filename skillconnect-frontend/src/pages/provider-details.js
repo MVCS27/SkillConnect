@@ -28,7 +28,7 @@ export default function ProviderDetails() {
           setProvider(data.data);
 
           // Fetch provider image
-          fetch(`${API_BASE_URL}/user-profile-image/${data.data._id}`)
+          fetch(`${API_BASE_URL}/user-profile-image/${data.data._id}`) // <-- use _id
             .then((res) => res.json())
             .then((imgData) => {
               setProviderImage(
@@ -71,7 +71,7 @@ export default function ProviderDetails() {
   // Fetch unavailable slots
   useEffect(() => {
     if (provider) {
-      fetch(`${API_BASE_URL}/provider/${provider._id}/unavailable`)
+      fetch(`${API_BASE_URL}/provider/${provider._id}/unavailable`) // <-- use _id
         .then((res) => res.json())
         .then((data) => {
           if (data.status === "ok") setUnavailableSlots(data.data);
@@ -85,8 +85,8 @@ export default function ProviderDetails() {
       return;
     }
 
-    const customerId = customerData._id;
-    const providerId = provider._id;
+    const customerId = customerData._id; // <-- use _id
+    const providerId = provider._id;     // <-- use _id
     const serviceCategory = provider.serviceCategory;
 
     if (!customerId || !providerId || !serviceCategory) {

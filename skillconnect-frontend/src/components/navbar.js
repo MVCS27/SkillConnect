@@ -5,12 +5,12 @@ import logo from '../assets/images/Skill.png';
 
 function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef(null);
+  const navRef = useRef(null); // Attach to the whole navbar
 
-  // Close menu when clicking outside
+  // Close menu when clicking outside the navbar
   useEffect(() => {
     function handleClickOutside(event) {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
+      if (navRef.current && !navRef.current.contains(event.target)) {
         setMenuOpen(false);
       }
     }
@@ -24,8 +24,13 @@ function Navbar() {
     };
   }, []);
 
+  const handleToggle = (e) => {
+    e.stopPropagation();
+    setMenuOpen((open) => !open);
+  };
+
   return (
-    <nav className="navbar">
+    <nav className="navbar" ref={navRef}>
       <div className="navbar-container">
         <div className="navbar-brand">
           <Link to="/landing-page" className="navbar-logo">
@@ -33,12 +38,12 @@ function Navbar() {
             <span className="brand-name">SkillConnect</span>
           </Link>
 
-          <button className="menu-toggle" onClick={() => setMenuOpen(!menuOpen)}>
+          <button className="menu-toggle" onClick={handleToggle}>
             ☰
           </button>
         </div>
 
-        <div ref={menuRef} className={`navbar-links ${menuOpen ? 'active' : ''}`}>
+        <div className={`navbar-links ${menuOpen ? 'active' : ''}`}>
           <Link to="/landing-page" className="nav-link">Home</Link>
           <Link to="/sign-up" className="nav-link">Sign up</Link>
           <Link to="/sign-in" className="nav-link">Login</Link>

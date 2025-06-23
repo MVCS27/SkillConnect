@@ -1,6 +1,6 @@
 .FormContainer {
     width: 100%;
-    margin-top: 6.4em;
+    margin-top: 4em;
     padding: 2em 0;
 }
 
@@ -21,4 +21,9 @@
     margin: auto;
 }
 
+@media (max-width: 950px) and (min-width: 769px) {
+    .FormContainer {
+        margin-top: 7.5em;
+    }
+}
 

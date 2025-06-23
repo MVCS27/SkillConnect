@@ -25,7 +25,7 @@ export default function UserDetails() {
     });
     const data = await res.json();
     if (data.status === "ok") {
-      setBookings(bookings.map(b => b._id === bookingId ? { ...b, status: "cancelled" } : b));
+      setBookings(bookings.map(b => b.id === bookingId ? { ...b, status: "cancelled" } : b));
     }
   };
 
@@ -49,7 +49,7 @@ export default function UserDetails() {
           alert("Token expired, login again");
           logOutUser();
         } if (data.data && data.data._id) {
-        fetch(`${API_BASE_URL}/bookings/customer/${data.data._id}`)
+          fetch(`${API_BASE_URL}/bookings/customer/${data.data._id}`)
           .then((res) => res.json())
           .then((bookingData) => {
             if (bookingData.status === "ok") {
