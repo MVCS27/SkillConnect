@@ -12,6 +12,7 @@ const jwt = require("jsonwebtoken");
 const JWT_SECRET = process.env.JWT_SECRET;
 
 const cors = require("cors");
+
 const nodemailer = require("nodemailer");
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
@@ -21,15 +22,30 @@ app.use(express.json());
 
 const allowedOrigins = [
   "http://localhost:3000",
+  "https://skill-share-sand.vercel.app",
   "https://skill-connect-git-main-mark-vincents-projects.vercel.app",
   "https://skill-connect-epz1sxqg8-mark-vincents-projects.vercel.app",
-  "https://skill-share-sand.vercel.app",
-  "https://skill-connect-3yn7ulmbr-mark-vincents-projects.vercel.app",
-  "https://skill-connect-bjxdi8e6q-mark-vincents-projects.vercel.app" // <-- Add this line
+  // add your main production domains here
 ];
 
 app.use(cors({
-  origin: allowedOrigins,
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+
+    // Allow all Vercel preview domains
+    if (/^https:\/\/skill-connect-[a-z0-9]+-mark-vincents-projects\.vercel\.app$/.test(origin)) {
+      return callback(null, true);
+    }
+
+    // Allow whitelisted domains
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    // Otherwise, block
+    return callback(new Error("Not allowed by CORS"));
+  },
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
   credentials: false,
 }));
