@@ -1,9 +1,10 @@
 const express = require("express");
 const app = express();
 require("dotenv").config();
-
-const mongoose = require("mongoose");
 const mongoUrl = process.env.MONGO_URL;
+mongoose.connect(mongoUrl)
+        .then(() => {console.log("Connected to database");})
+        .catch((e) => console.log(e));
 
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
@@ -32,10 +33,6 @@ app.use(cors({
 
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
-
-mongoose.connect(mongoUrl)
-        .then(() => {console.log("Connected to database");})
-        .catch((e) => console.log(e));
 
 require("./models/userDetails");
 require("./models/imageDetails");
