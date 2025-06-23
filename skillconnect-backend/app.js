@@ -24,7 +24,8 @@ const allowedOrigins = [
   "https://skill-connect-git-main-mark-vincents-projects.vercel.app",
   "https://skill-connect-epz1sxqg8-mark-vincents-projects.vercel.app",
   "https://skill-share-sand.vercel.app",
-  "https://skill-connect-3yn7ulmbr-mark-vincents-projects.vercel.app" // <-- add this line
+  "https://skill-connect-3yn7ulmbr-mark-vincents-projects.vercel.app",
+  "https://skill-connect-bjxdi8e6q-mark-vincents-projects.vercel.app" // <-- Add this line
 ];
 
 app.use(cors({
