@@ -124,7 +124,7 @@ function UpdateUser() {
         Accept: "application/json",
       },
       body: JSON.stringify({
-        id: location.state._id,
+        _id: location.state._id, 
         firstName,
         lastName,
         phoneNumber,

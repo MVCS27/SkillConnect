@@ -4,9 +4,10 @@ import '../node_modules/bootstrap/dist/css/bootstrap.min.css';
 import './App.css';
 
 import UpdateUser from './components/update-user';
+import PersonelInCharge from './components/personel-incharge';
 
 import AccountVerify from './utils/account-verify'
-import PersonelInCharge from './utils/personel-incharge';
+import NewPassword from './utils/new-password';
 
 import AdminDashboard from './pages/admin/admin-dashboard';
 import AdminProviders from './pages/admin/admin-providers';
@@ -41,6 +42,7 @@ function App() {
         <Route path="/sign-up" element={<UserSignUp />} />
         <Route path="/register-provider" element={<ProviderSignUp />} />
         <Route path="/account-verify" element={<AccountVerify />} />
+        <Route path="/new-password" element={<NewPassword />} />
 
         {/* Protected Routes */}
         <Route element={<ProtectedRoute />}>

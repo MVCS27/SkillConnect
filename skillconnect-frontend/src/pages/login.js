@@ -139,6 +139,10 @@ export default class Login extends Component {
               </button>
             </div>
 
+             <p className="forgot-password text-center text-7xl">
+              <a href="/new-password">Forgot your Password?</a>
+            </p>
+
             <p className="forgot-password text-center text-7xl">
               No Account yet? <a href="/sign-up">Sign In as a User</a> or <a href="/register-provider">Sign In as a Provider</a>
             </p>

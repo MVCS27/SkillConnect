@@ -17,6 +17,7 @@ const nodemailer = require("nodemailer");
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const { v4: uuidv4 } = require('uuid');
+const geocodeAddress = require("./utils/geocode");
 
 app.use(express.json());
 
@@ -55,11 +56,13 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 require("./models/userDetails");
 require("./models/imageDetails");
-require("./models/booking")
+require("./models/booking");
+require("./models/ratingsComments");
 
 const User = mongoose.model("users");
-const Images = mongoose.model("images")
-const Booking = mongoose.model("booking")
+const Images = mongoose.model("images");
+const Booking = mongoose.model("booking");
+const RatingsComments = mongoose.model("ratingsComments");
 
 // Cloudinary config using .env
 cloudinary.config({
@@ -87,38 +90,43 @@ const businessUpload = upload.fields([
 
 // Registration (add _id generation)
 app.post("/register", async (req, res) => {
-    const { firstName, lastName, phoneNumber, email, password, address } = req.body;
-    const hashedPassword = await bcrypt.hash(password, 10);
+  const { firstName, lastName, phoneNumber, email, password, address } = req.body;
+  const hashedPassword = await bcrypt.hash(password, 10);
 
-    try {
-        const oldUser = await User.findOne({ email });
-        if (oldUser) {
-            return res.send({ error: "Email Already Exists" });
-        }
-
-        const oldPhone = await User.findOne({ phoneNumber });
-        if (oldPhone) {
-            return res.send({ error: "Phone Number Already Exists" });
-        }
-
-        const _id = uuidv4();
-        await User.create({
-            _id,
-            firstName,
-            lastName,
-            username: `${firstName} ${lastName}`,
-            phoneNumber,
-            email,
-            hashedPassword,
-            address,
-            userType: "customer",
-        });
-
-        res.send({ status: "success", _id });
-    } catch (error) {
-        console.error("Registration error:", error);
-        res.send({ status: "error", error });
+  try {
+    const oldUser = await User.findOne({ email });
+    if (oldUser) {
+      return res.send({ error: "Email Already Exists" });
     }
+
+    const oldPhone = await User.findOne({ phoneNumber });
+    if (oldPhone) {
+      return res.send({ error: "Phone Number Already Exists" });
+    }
+
+    // Geocode address
+    const fullAddress = `${address.street}, ${address.barangay}, ${address.cityMunicipality}, ${address.province}, ${address.zipCode || ""}`;
+    const geo = await geocodeAddress(fullAddress);
+
+    const _id = uuidv4();
+    await User.create({
+      _id,
+      firstName,
+      lastName,
+      username: `${firstName} ${lastName}`,
+      phoneNumber,
+      email,
+      hashedPassword,
+      userType: "customer",
+      address,
+      location: geo
+    });
+
+    res.send({ status: "success", _id });
+  } catch (error) {
+    console.error("Registration error:", error);
+    res.send({ status: "error", error });
+  }
 });
 
 app.post("/updateUser", async (req, res) => {
@@ -133,6 +141,12 @@ app.post("/updateUser", async (req, res) => {
         if (password) {
             const hashedPassword = await bcrypt.hash(password, 10);
             updateFields.hashedPassword = hashedPassword;
+        }
+        // Geocode address if present
+        if (address) {
+            const fullAddress = `${address.street}, ${address.barangay}, ${address.cityMunicipality}, ${address.province}, ${address.zipCode || ""}`;
+            const geo = await geocodeAddress(fullAddress);
+            updateFields.location = geo;
         }
         const result = await User.updateOne({ _id }, { $set: updateFields });
         if (result.matchedCount === 0 && result.n === 0) {
@@ -182,6 +196,19 @@ app.post("/userData", async (req, res) => {
     console.error("Token verification failed:", err);
     return res.send({ status: "error", data: "token expired" });
   }
+});
+
+app.post("/user/update-address", async (req, res) => {
+  const { userId, address } = req.body;
+  const fullAddress = `${address.street}, ${address.barangay}, ${address.cityMunicipality}, ${address.province}, ${address.zipCode || ""}`;
+  const geo = await geocodeAddress(fullAddress);
+
+  const updated = await User.findByIdAndUpdate(userId, {
+    address,
+    location: geo
+  }, { new: true });
+
+  res.json({ status: "ok", user: updated });
 });
 
 // Get all business providers
@@ -237,6 +264,37 @@ app.get("/provider/:id", async (req, res) => {
   }
 });
 
+///////////////////////////////////////////////////
+// Search Filter
+app.get("/providers/nearby", async (req, res) => {
+  const { lat, lng, maxDistance = 10 } = req.query; // maxDistance in kilometers
+  if (!lat || !lng) return res.status(400).json({ status: "error", error: "Missing coordinates" });
+
+  // Get all providers with location
+  const providers = await User.find({ userType: "business", location: { $exists: true } });
+
+  // Calculate distance using Haversine formula
+  function getDistance(lat1, lng1, lat2, lng2) {
+    function toRad(x) { return x * Math.PI / 180; }
+    const R = 6371; // km
+    const dLat = toRad(lat2 - lat1);
+    const dLng = toRad(lng2 - lng1);
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+              Math.sin(dLng/2) * Math.sin(dLng/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  }
+
+  const nearby = providers.filter(p => {
+    if (!p.location || typeof p.location.lat !== "number" || typeof p.location.lng !== "number") return false;
+    const dist = getDistance(Number(lat), Number(lng), p.location.lat, p.location.lng);
+    return dist <= maxDistance;
+  });
+
+  res.json({ status: "ok", data: nearby });
+});
+
 ///////////////////////////////////
 // For booking
 app.post("/book", async (req, res) => {
@@ -290,6 +348,30 @@ app.post("/bookings/update", async (req, res) => {
   const { bookingId, status } = req.body;
 
   try {
+    // Find the booking
+    const booking = await Booking.findOne({ _id: bookingId });
+    if (!booking) {
+      return res.status(404).json({ status: "error", error: "Booking not found" });
+    }
+
+    // If canceling, remove the time from provider's unavailableSlots
+    if (status === "cancelled") {
+      const provider = await User.findOne({ _id: booking.providerId });
+      if (provider) {
+        const slot = provider.unavailableSlots.find(s => s.date === booking.date);
+        if (slot) {
+          // Remove the time from the slot
+          slot.times = slot.times.filter(t => t !== booking.time);
+          // If no times left for that date, remove the slot entirely
+          if (slot.times.length === 0) {
+            provider.unavailableSlots = provider.unavailableSlots.filter(s => s.date !== booking.date);
+          }
+          await provider.save();
+        }
+      }
+    }
+
+    // Update booking status
     await Booking.updateOne({ _id: bookingId }, { status });
     res.json({ status: "ok" });
   } catch (error) {
@@ -400,6 +482,10 @@ app.post("/register-business", businessUpload, async (req, res) => {
     const oldPhone = await User.findOne({ phoneNumber });
     if (oldPhone) return res.send({ error: "Phone Number Already Exists" });
 
+    // Geocode address
+    const fullAddress = `${address.street}, ${address.barangay}, ${address.cityMunicipality}, ${address.province}, ${address.zipCode || ""}`;
+    const geo = await geocodeAddress(fullAddress);
+
     const _id = uuidv4();
     await User.create({
       _id,
@@ -414,6 +500,7 @@ app.post("/register-business", businessUpload, async (req, res) => {
       serviceCategory,
       verificationDocuments,
       isVerifiedBusiness: false,
+      location: geo
     });
 
     res.send({ status: "success", _id });
@@ -611,10 +698,153 @@ app.post("/send-personel-incharge", upload.single("image"), async (req, res) => 
   }
 });
 
+app.post("/booking/confirm-complete", async (req, res) => {
+  const { bookingId, userType } = req.body;
+  const update = {};
+  if (userType === "customer") update.customerConfirmed = true;
+  if (userType === "provider") update.providerConfirmed = true;
+
+  const booking = await Booking.findByIdAndUpdate(
+    bookingId,
+    { $set: update },
+    { new: true }
+  );
+
+  if (!booking) return res.status(404).json({ status: "error", error: "Booking not found" });
+
+  // If both confirmed, mark as complete and send email
+  let bothConfirmed = false;
+  if (booking.customerConfirmed && booking.providerConfirmed) {
+    booking.status = "complete";
+    await booking.save();
+
+    // Send email to both
+    const customer = await User.findById(booking.customerId);
+    const provider = await User.findById(booking.providerId);
+
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: [customer.email, provider.email],
+      subject: "Booking Completed",
+      text: `Your booking for ${booking.serviceCategory} is now marked as complete. If this was not you, please contact admin immediately.`,
+    };
+
+    await transporter.sendMail(mailOptions);
+    bothConfirmed = true;
+  }
+
+  res.json({ status: "ok", bothConfirmed });
+});
+
+app.get("/booking/confirmation-status/:bookingId", async (req, res) => {
+  const booking = await Booking.findById(req.params.bookingId);
+  if (!booking) return res.status(404).json({ status: "error", error: "Booking not found" });
+  res.json({
+    status: "ok",
+    confirmed: {
+      customer: !!booking.customerConfirmed,
+      provider: !!booking.providerConfirmed,
+    }
+  });
+});
+
+// Send new password email change notification
+app.post("/send-password-changed-email", async (req, res) => {
+  const { userId } = req.body;
+  try {
+    const user = await User.findOne({ _id: userId });
+    if (!user || !user.email) {
+      return res.status(404).json({ status: "error", error: "User not found" });
+    }
+
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: user.email,
+      subject: "Your SkillConnect Password Was Changed",
+      text: `Hello ${user.firstName || ""},\n\nYour password was changed. If this wasn't you, please contact the admin immediately.`,
+    };
+
+    await transporter.sendMail(mailOptions);
+    res.json({ status: "ok" });
+  } catch (error) {
+    console.error("Failed to send password changed email:", error);
+    res.status(500).json({ status: "error", error: "Failed to send email" });
+  }
+});
+
+// Submit a rating/comment
+app.post("/provider/rate", async (req, res) => {
+  const { providerId, customerId, userName, rating, comment } = req.body;
+  try {
+    await RatingsComments.create({ providerId, customerId, userName, rating, comment });
+    res.json({ status: "ok" });
+  } catch (error) {
+    res.status(500).json({ status: "error", error: "Failed to submit rating" });
+  }
+});
+
+// Get all ratings/comments for a provider
+app.get("/provider/:id/ratings", async (req, res) => {
+  try {
+    const ratings = await RatingsComments.find({ providerId: req.params.id }).sort({ createdAt: -1 });
+    res.json({ status: "ok", data: ratings });
+  } catch (error) {
+    res.status(500).json({ status: "error", error: "Failed to fetch ratings" });
+  }
+});
+
+// Get average rating for a provider
+app.get("/provider/:id/average-rating", async (req, res) => {
+  try {
+    const ratings = await RatingsComments.find({ providerId: req.params.id });
+    if (ratings.length === 0) return res.json({ status: "ok", average: 0 });
+    const avg = ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length;
+    res.json({ status: "ok", average: avg.toFixed(2) });
+  } catch (error) {
+    res.status(500).json({ status: "error", error: "Failed to fetch average rating" });
+  }
+});
+
 // Retrieve user by _id (string)
 app.get("/user/by-id/:id", async (req, res) => {
   const { id } = req.params;
   const user = await User.findOne({ _id: id });
+  if (!user) {
+    return res.status(404).json({ status: "error", error: "User not found" });
+  }
+  res.json({ status: "ok", data: user });
+});
+
+// Retrieve user by email
+app.get("/user/by-email/:email", async (req, res) => {
+  const { email } = req.params;
+  const user = await User.findOne({ email: email });
+  if (!user) {
+    return res.status(404).json({ status: "error", error: "User not found" });
+  }
+  res.json({ status: "ok", data: user });
+});
+
+// Retrieve user by username
+app.get("/user/by-username/:username", async (req, res) => {
+  const { username } = req.params;
+  const user = await User.findOne({ username: username });
   if (!user) {
     return res.status(404).json({ status: "error", error: "User not found" });
   }

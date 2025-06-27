@@ -3,6 +3,17 @@
   font-family: 'Arial', sans-serif;
 }
 
+.provider-sections {
+  margin: 8em 0 0 0;
+}
+
+.provider-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5em;
+  margin-bottom: 2em;
+}
+
 .provider-grid {
   margin-top: 7em;
   display: flex;
@@ -20,12 +31,13 @@
   background-color: white;
   text-align: center;
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
-  transition: transform .2s; /* Animation */
+  transition: transform .2s, box-shadow 0.2s; /* Animation */
 }
 
 .provider-card:hover {
   cursor: pointer;
   transform: scale(1.1);
+  box-shadow: 0 4px 16px #ccc;
 }
 
 .provider-image {

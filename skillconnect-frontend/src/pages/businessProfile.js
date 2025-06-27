@@ -2,7 +2,8 @@ import React, { useEffect, useState } from "react";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faGear, faFileLines, faRightFromBracket, faChevronRight, faPenToSquare, faCheckCircle, faSyncAlt, faHourglassHalf } from "@fortawesome/free-solid-svg-icons";
 import { useNavigate } from "react-router-dom";
-import PersonelInCharge from "../utils/personel-incharge";
+import PersonelInCharge from "../components/personel-incharge";
+import CompleteProcess from "../components/complete-process"; // import at top
 
 import NavbarLogedInProvider from "../components/navbar-logedin-provider";
 import { logOutUser } from "../controllers/logout";
@@ -15,6 +16,7 @@ export default function UserDetails() {
   const [incomingBookings, setIncomingBookings] = useState([]);
   const [profileImage, setProfileImage] = useState(null);
   const [showPersonnelModal, setShowPersonnelModal] = useState(false);
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [selectedBookingId, setSelectedBookingId] = useState(null);
 
   const navigate = useNavigate();
@@ -156,13 +158,20 @@ export default function UserDetails() {
 
             return (
               <div className="status-process">
-                 <FontAwesomeIcon icon={faSyncAlt} className="status-icon" />
+                <FontAwesomeIcon icon={faSyncAlt} className="status-icon" />
                 <span>Ongoing</span>
-
                 {ongoingBookings.length > 0 ? (
                   <div className="status-item">
                     {ongoingBookings.map((b) => (
-                      <div key={b._id} className="booking-card">
+                      <div
+                        key={b._id}
+                        className="booking-card"
+                        style={{ cursor: "pointer" }}
+                        onClick={() => {
+                          setSelectedBookingId(b._id);
+                          setShowCompleteModal(true);
+                        }}
+                      >
                         <p>Customer: {b.customerId?.firstName || "N/A"} {b.customerId?.lastName || ""}</p>
                         <p>Email: {b.customerId?.email || "N/A"}</p>
                         <p>Phone: {b.customerId?.phoneNumber || "N/A"}</p>
@@ -179,10 +188,25 @@ export default function UserDetails() {
 
           {/* COMPLETED */}
           <div className="status-process">
-            <FontAwesomeIcon icon={faCheckCircle} className="status-icon" />
             <span>Completed</span>
-            <p className="no-bookings">No completed bookings yet.</p>
-            {/* Add completed bookings if applicable in future */}
+            <FontAwesomeIcon icon={faCheckCircle} className="status-icon" />
+            <div className="status-item">
+              {incomingBookings
+                .filter(b => b.status === "complete")
+                .map((b) => (
+                  <div key={b._id} className="booking-card">
+                    <p>
+                      {userData.userType === "customer"
+                        ? `Provider: ${b.providerId?.firstName || "N/A"} ${b.providerId?.lastName || ""}`
+                        : `Customer: ${b.customerId?.firstName || "N/A"} ${b.customerId?.lastName || ""}`}
+                    </p>
+                    <p>Service: {b.serviceCategory}</p>
+                  </div>
+                ))}
+              {incomingBookings.filter(b => b.status === "complete").length === 0 && (
+                <p className="no-bookings">No completed bookings yet.</p>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -227,6 +251,32 @@ export default function UserDetails() {
             <PersonelInCharge
               bookingId={selectedBookingId}
               onSuccess={() => setShowPersonnelModal(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {showCompleteModal && (
+        <div className="modal-overlay" style={{
+          position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh",
+          background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000
+        }}>
+          <div style={{ position: "relative" }}>
+            <button
+              onClick={() => setShowCompleteModal(false)}
+              style={{
+                position: "absolute", top: 8, right: 8, background: "none", border: "none", fontSize: 22, cursor: "pointer", zIndex: 1001
+              }}
+              aria-label="Close"
+            >×</button>
+            <CompleteProcess
+              bookingId={selectedBookingId}
+              userType="provider"
+              onSuccess={() => {
+                setShowCompleteModal(false);
+                // Optionally refresh bookings here
+                window.location.reload();
+              }}
             />
           </div>
         </div>

@@ -3,6 +3,10 @@ import { useParams, useNavigate } from "react-router-dom";
 import API_BASE_URL from "../config/api";
 import DatePicker from "react-datepicker";
 import NavbarLogedIn from "../components/navbar-logedin";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faStar as solidStar } from "@fortawesome/free-solid-svg-icons";
+import { faStar as regularStar } from "@fortawesome/free-regular-svg-icons";
+
 import "react-datepicker/dist/react-datepicker.css";
 import "../assets/styles/profile.css";
 import "../assets/styles/calendar.css";
@@ -14,6 +18,7 @@ export default function ProviderDetails() {
   const [providerImage, setProviderImage] = useState(null);
   const [customerData, setCustomerData] = useState(null);
   const [bookingLoading, setBookingLoading] = useState(false);
+  const [ratings, setRatings] = useState([]);
 
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTime, setSelectedTime] = useState("");
@@ -79,18 +84,28 @@ export default function ProviderDetails() {
     }
   }, [provider]);
 
+  // Fetch ratings
+  useEffect(() => {
+    if (provider) {
+      fetch(`${API_BASE_URL}/provider/${provider._id}/ratings`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.status === "ok") setRatings(data.data);
+        });
+    }
+  }, [provider]);
+
   const handleBooking = async () => {
     if (!customerData || !provider) {
       alert("Booking info is incomplete.");
       return;
     }
 
-    const customerId = customerData._id; // <-- use _id
-    const providerId = provider._id;     // <-- use _id
+    const customerId = customerData._id;
+    const providerId = provider._id;
     const serviceCategory = provider.serviceCategory;
 
     if (!customerId || !providerId || !serviceCategory) {
-      console.error("Missing booking data:", { customerId, providerId, serviceCategory });
       alert("Booking failed: Missing information.");
       return;
     }
@@ -251,6 +266,28 @@ export default function ProviderDetails() {
             </button>
           </div>
         )}
+
+        <div className="provider-comments">
+          <h4>Ratings & Comments</h4>
+          {ratings.length === 0 && <p>No ratings yet.</p>}
+          {ratings.map(r => (
+            <div key={r._id} className="comment-card">
+              <div>
+                {[1,2,3,4,5].map(star => (
+                  <FontAwesomeIcon
+                    key={star}
+                    icon={r.rating >= star ? solidStar : regularStar}
+                    style={{ color: "#FFD700", fontSize: 16 }}
+                  />
+                ))}
+              </div>
+              <div style={{ fontSize: 14, color: "#333" }}>{r.comment}</div>
+              <div style={{ fontSize: 12, color: "#888" }}>
+                By {r.userName} on {new Date(r.createdAt).toLocaleString()}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

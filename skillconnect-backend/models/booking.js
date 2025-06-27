@@ -8,6 +8,8 @@ const bookingSchema = new mongoose.Schema({
   status: { type: String, default: "processing" },
   date: String,
   time: String,
+  customerConfirmed: { type: Boolean, default: false },
+  providerConfirmed: { type: Boolean, default: false },
 }, { timestamps: true });
 
 module.exports = mongoose.model("booking", bookingSchema);

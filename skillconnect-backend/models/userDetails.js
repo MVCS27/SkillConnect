@@ -47,6 +47,10 @@ const UserDetailsSchema = new mongoose.Schema(
         times: [String],
       }
     ],
+    location: {
+      lat: Number,
+      lng: Number
+    },
   },
   {
     collection: "users",
