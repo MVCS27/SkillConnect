@@ -881,7 +881,7 @@ app.get("/provider/:id/gallery", async (req, res) => {
 });
 
 // Update /send-personel-incharge to use Cloudinary storage
-app.post("/send-personel-incharge", async (req, res) => {
+app.post("/send-personel-incharge", upload.single("image"), async (req, res) => {
   const { description, bookingId } = req.body;
   const imagePath = req.file ? req.file.path : null;
 
