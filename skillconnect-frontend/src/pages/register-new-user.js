@@ -5,6 +5,7 @@ import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 import { Registry } from '../controllers/registry';
 import Navbar from "../components/navbar";
 import '../assets/styles/form.css';
+import API_BASE_URL from "../config/api";
 
 //import app from "../config/firebase-config";
 //import { getAuth, RecaptchaVerifier } from "firebase/auth";
@@ -37,7 +38,13 @@ export default class UserSignUp extends Component {
         cityMunicipality: "",
         province: "",
         zipCode: "",
-      }
+      },
+      emailVerified: false,
+      showEmailPopup: false,
+      verificationCode: "",
+      codeInput: "",
+      codeStatus: "", // "pending", "success", "error"
+      codeError: "",
     };
   }
 
@@ -57,6 +64,39 @@ export default class UserSignUp extends Component {
       }
     }));
   }
+
+  sendVerificationCode = async () => {
+    const { email } = this.state;
+    if (!email) return;
+    this.setState({ codeStatus: "pending", codeError: "" });
+    const res = await fetch(`${API_BASE_URL}/send-code`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      this.setState({ showEmailPopup: true, codeStatus: "" });
+    } else {
+      this.setState({ codeStatus: "error", codeError: data.message || "Failed to send code." });
+    }
+  };
+
+  verifyCode = async () => {
+    const { email, codeInput } = this.state;
+    if (!codeInput) return;
+    const res = await fetch(`${API_BASE_URL}/verify-code`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, code: codeInput }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      this.setState({ emailVerified: true, codeStatus: "success", codeError: "" });
+    } else {
+      this.setState({ codeStatus: "error", codeError: "Incorrect code." });
+    }
+  };
 
   render() {
     
@@ -146,15 +186,13 @@ export default class UserSignUp extends Component {
             <label>Email</label>
             <input
               type="email"
-              className="form-control"
+              className={`form-control${this.state.codeStatus === "error" ? " is-invalid" : ""}${this.state.codeStatus === "success" ? " is-valid" : ""}`}
               placeholder="Enter Email"
               value={this.state.email}
-              onChange={(e) => this.setState({ email: e.target.value })}
-              onBlur={(e) => {
-                const value = e.target.value;
-                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                this.setState({ emailError: !emailRegex.test(value) });
+              onChange={(e) => {
+                this.setState({ email: e.target.value, emailVerified: false, showEmailPopup: false, codeStatus: "", codeInput: "" });
               }}
+              onBlur={this.sendVerificationCode}
               required
             />
             {this.state.emailError && (
@@ -164,6 +202,22 @@ export default class UserSignUp extends Component {
             )}
           </div>
 
+          {/* Email Verification Popup */}
+          {this.state.showEmailPopup && (
+            <div className="email-popup" style={{ background: "#fffbe6", border: "1px solid #f0e130", padding: 16, borderRadius: 8, marginBottom: 16 }}>
+              <p>Enter the verification code sent to your email.</p>
+              <input
+                type="text"
+                value={this.state.codeInput}
+                onChange={e => this.setState({ codeInput: e.target.value })}
+                className={`form-control${this.state.codeStatus === "error" ? " is-invalid" : ""}${this.state.codeStatus === "success" ? " is-valid" : ""}`}
+                style={{ borderColor: this.state.codeStatus === "error" ? "red" : this.state.codeStatus === "success" ? "green" : undefined }}
+              />
+              <button type="button" onClick={this.verifyCode} disabled={this.state.codeStatus === "success"}>Verify</button>
+              {this.state.codeStatus === "error" && <div style={{ color: "red" }}>{this.state.codeError}</div>}
+              {this.state.codeStatus === "success" && <div style={{ color: "green" }}>Email verified!</div>}
+            </div>
+          )}
 
           {/* Password Field */}
           <div className="mb-3 position-relative">

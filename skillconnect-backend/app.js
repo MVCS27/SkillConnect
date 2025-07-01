@@ -20,6 +20,9 @@ const { v4: uuidv4 } = require('uuid');
 const geocodeAddress = require("./utils/geocode");
 const path = require("path");
 
+const verificationCodes = {}; // In-memory; use DB for production
+
+
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
@@ -1086,6 +1089,51 @@ app.get("/user/by-username/:username", async (req, res) => {
     return res.status(404).json({ status: "error", error: "User not found" });
   }
   res.json({ status: "ok", data: user });
+});
+
+function generateCode() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+async function sendVerificationEmail(toEmail, code) {
+  let transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+
+  await transporter.sendMail({
+    from: `"SkillConnect" <${process.env.EMAIL_USER}>`,
+    to: toEmail,
+    subject: 'SkillConnect Email Verification Code',
+    text: `Your verification code is: ${code}`,
+  });
+}
+
+app.post('/send-code', async (req, res) => {
+  const { email } = req.body;
+  const code = generateCode();
+  verificationCodes[email] = code;
+
+  try {
+    await sendVerificationEmail(email, code);
+    res.json({ success: true, message: 'Verification code sent.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Email failed to send.' });
+  }
+});
+
+app.post('/verify-code', (req, res) => {
+  const { email, code } = req.body;
+  if (verificationCodes[email] === code) {
+    delete verificationCodes[email];
+    res.json({ success: true, message: 'Email verified.' });
+  } else {
+    res.status(400).json({ success: false, message: 'Incorrect code.' });
+  }
 });
 
 app.get("/", (req, res) => {
