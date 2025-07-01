@@ -58,7 +58,7 @@ function ProviderGallery({ providerId, canUpload }) {
               src={img.image}
               alt={`Portfolio ${idx + 1}`}
               className="gallery-img"
-              style={{ width: "100%", height: 90, objectFit: "cover", borderRadius: 8, border: "1px solid #eee" }}
+              style={{ width: "100%", height: "20em", objectFit: "cover", borderRadius: 8, border: "1px solid #eee" }}
             />
             {canUpload && (
               <button

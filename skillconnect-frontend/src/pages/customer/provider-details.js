@@ -331,7 +331,10 @@ export default function ProviderDetails() {
           </div>
         )}
 
+               <hr />
+
         {/* GALLERY: Show here, above ratings */}
+        <h4>Work Showcase</h4>
         <ProviderGallery providerId={provider?._id} canUpload={false} />
 
         {/* RATINGS */}
