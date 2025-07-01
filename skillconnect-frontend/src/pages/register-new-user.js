@@ -214,6 +214,15 @@ export default class UserSignUp extends Component {
                 style={{ borderColor: this.state.codeStatus === "error" ? "red" : this.state.codeStatus === "success" ? "green" : undefined }}
               />
               <button type="button" onClick={this.verifyCode} disabled={this.state.codeStatus === "success"}>Verify</button>
+              <button
+                type="button"
+                onClick={this.sendVerificationCode}
+                style={{ marginLeft: 8 }}
+                disabled={this.state.codeStatus === "pending"}
+              >
+                Resend Code
+              </button>
+              {this.state.codeStatus === "pending" && <div style={{ color: "#888" }}>Sending code...</div>}
               {this.state.codeStatus === "error" && <div style={{ color: "red" }}>{this.state.codeError}</div>}
               {this.state.codeStatus === "success" && <div style={{ color: "green" }}>Email verified!</div>}
             </div>

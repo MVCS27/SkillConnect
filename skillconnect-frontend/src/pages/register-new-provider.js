@@ -207,6 +207,32 @@ export default class ProviderSignUp extends Component {
               Please enter a valid email address
             </div>
           )}
+
+          {/* Email Verification Popup - MOVE THIS INSIDE THE EMAIL FIELD DIV */}
+          {this.state.showEmailPopup && (
+            <div className="email-popup" style={{ background: "#fffbe6", border: "1px solid #f0e130", padding: 16, borderRadius: 8, marginTop: 8 }}>
+              <p>Enter the verification code sent to your email.</p>
+              <input
+                type="text"
+                value={this.state.codeInput}
+                onChange={e => this.setState({ codeInput: e.target.value })}
+                className={`form-control${this.state.codeStatus === "error" ? " is-invalid" : ""}${this.state.codeStatus === "success" ? " is-valid" : ""}`}
+                style={{ borderColor: this.state.codeStatus === "error" ? "red" : this.state.codeStatus === "success" ? "green" : undefined }}
+              />
+              <button type="button" onClick={this.verifyCode} disabled={this.state.codeStatus === "success"}>Verify</button>
+              <button
+                type="button"
+                onClick={this.sendVerificationCode}
+                style={{ marginLeft: 8 }}
+                disabled={this.state.codeStatus === "pending"}
+              >
+                Resend Code
+              </button>
+              {this.state.codeStatus === "pending" && <div style={{ color: "#888" }}>Sending code...</div>}
+              {this.state.codeStatus === "error" && <div style={{ color: "red" }}>{this.state.codeError}</div>}
+              {this.state.codeStatus === "success" && <div style={{ color: "green" }}>Email verified!</div>}
+            </div>
+          )}
         </div>
         
         
@@ -422,22 +448,7 @@ export default class ProviderSignUp extends Component {
 
         </div>
 
-        {/* Email Verification Popup */}
-        {this.state.showEmailPopup && (
-          <div className="email-popup" style={{ background: "#fffbe6", border: "1px solid #f0e130", padding: 16, borderRadius: 8, marginBottom: 16 }}>
-            <p>Enter the verification code sent to your email.</p>
-            <input
-              type="text"
-              value={this.state.codeInput}
-              onChange={e => this.setState({ codeInput: e.target.value })}
-              className={`form-control${this.state.codeStatus === "error" ? " is-invalid" : ""}${this.state.codeStatus === "success" ? " is-valid" : ""}`}
-              style={{ borderColor: this.state.codeStatus === "error" ? "red" : this.state.codeStatus === "success" ? "green" : undefined }}
-            />
-            <button type="button" onClick={this.verifyCode} disabled={this.state.codeStatus === "success"}>Verify</button>
-            {this.state.codeStatus === "error" && <div style={{ color: "red" }}>{this.state.codeError}</div>}
-            {this.state.codeStatus === "success" && <div style={{ color: "green" }}>Email verified!</div>}
-          </div>
-        )}
+        
       </div>
     )
   }

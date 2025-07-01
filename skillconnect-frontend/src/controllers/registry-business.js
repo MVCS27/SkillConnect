@@ -37,6 +37,12 @@ export class RegistryBusiness {
   handleSubmit(e) {
     e.preventDefault();
 
+    // Require email verification
+    if (!this.component.state.emailVerified) {
+      alert("Please verify your email before signing up.");
+      return;
+    }
+
     const {
       firstName,
       lastName,
