@@ -54,12 +54,15 @@ export class Registry {
       .then((data) => {
         console.log("Registration response:", data);
         if (data.status === "success") {
-          // Redirect customers to their profile
           window.location.href = "/sign-in?registered=success";
         } else if (data.error === "Mobile Number Already Exists") {
           alert("Mobile number already exists. Please use a different number.");
         } else {
-          alert("Registration failed. " + (data.error ? JSON.stringify(data.error) : "Please try again."));
+          // Show the real error message
+          let errorMsg = typeof data.error === "string"
+            ? data.error
+            : JSON.stringify(data.error);
+          alert("Registration failed. " + errorMsg);
         }
       })
       .catch((error) => {
