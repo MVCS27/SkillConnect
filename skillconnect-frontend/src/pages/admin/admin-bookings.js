@@ -21,14 +21,15 @@ export default function AdminBookings() {
     return acc;
   }, {});
 
-  const allStatuses = Array.from(new Set(bookings.map(b => b.status || "processing")));
+  //const allStatuses = Array.from(new Set(bookings.map(b => b.status || "processing")));
+  const statusOrder = ["processing", "ongoing", "complete", "cancelled"];
 
   return (
     <div>
       <NavbarAdmin />
       <div style={{ maxWidth: 1100, margin: "8em auto", padding: "2rem" }}>
         <h2 style={{ color: "#d4a017" }}>Admin Bookings</h2>
-        {allStatuses.map(status => (
+        {statusOrder.map(status => (
           <div key={status} style={{ marginBottom: "2rem" }}>
             <h3 style={{ color: "#888" }}>{status.charAt(0).toUpperCase() + status.slice(1)}</h3>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
