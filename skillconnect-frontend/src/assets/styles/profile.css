@@ -60,11 +60,57 @@
   padding-top: 1rem;
 }
 
+/* Skills Section */
+.skill-tag {
+  background-color: #f0f0f0;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.delete-skill-button {
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  margin-left: 4px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+}
+
+.svg-inline--fa {
+  background: none;
+}
+
+.add-skill-button {
+  background: #f6cd41;
+  color: white;
+  border: none;
+  padding: 6px 15px;
+  border-radius: 50%;
+  font-size: 20px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.add-skill-button:hover {
+  background-color: #d4a017;
+}
+
+
 /* Service Status */
 .services-status {
   display: flex;
-  justify-content: space-around;
-  margin-top: 1rem;
+  flex-direction: row;
+  gap: 1.5em;
+  overflow-x: auto;
+  padding-bottom: 1em;
+  /* Hide scrollbar for aesthetics, optional */
+  scrollbar-width: thin;
+  scrollbar-color: #d4a017 #fffbe6;
 }
 
 .status-icon {
@@ -152,20 +198,124 @@
   background-color: #d4a017;
 }
 
+/* --- Booking Grid Layout --- */
+.bookings-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2em;
+  margin-top: 1.5em;
+  width: 100%;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.booking-column {
+  border-radius: 12px;
+  padding: 1em;
+  min-height: 320px;
+  max-height: 320px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.booking-card {
+  margin: auto;
+  margin-top: 0.5em;
+  min-width: 0;
+}
+
+.status-process {
+  flex: 0 0 26em; /* fixed width */
+  min-width: 20em;
+  max-width: 30em;
+  /*display: flex;*/
+  flex-direction: column;
+  align-items: center;
+  /*background: #fffbe6;*/
+  padding: 1em;
+  border-radius: 12px;
+  /*box-shadow: 0 2px 8px rgba(0,0,0,0.04);*/
+  overflow: hidden;
+}
+
+/* Scrollable booking cards inside each column */
+.status-item {
+  width: 100%;
+  overflow-y: auto;
+  max-height: 300px; /* Only show up to 3 cards, then scroll */
+  margin-top: 1em;
+  padding-right: 5px;
+}
+
+/* Custom scrollbar for status-item */
+.status-item::-webkit-scrollbar {
+  width: 6px;
+}
+.status-item::-webkit-scrollbar-thumb {
+  background-color: #d4a017;
+  border-radius: 3px;
+}
+
+/* Responsive: stack columns vertically on mobile */
+@media (max-width: 950px) {
+  .services-status {
+    flex-direction: column;
+    gap: 1em;
+    overflow-x: visible;
+  }
+  .status-process {
+    max-width: 100%;
+    width: 100%;
+  }
+}
+
+@media (max-width: 950px) and (min-width: 769px) {
+  .bookings-grid {
+    grid-template-columns: 1fr;
+    max-width: 600px;
+  }
+  .booking-column {
+    min-height: 260px;
+    max-height: 260px;
+  }
+}
+
 @media (max-width: 768px) {
-  .user-profile {
-    padding: 8em 2em 4em  2em; /* top right bottom lef*/
+  .bookings-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1em;
+    max-width: 100vw;
   }
-
-  .profile-image {
-    height: 8.5em;
-    max-width: 5.5em;
-    margin-left: .5em;
+  .booking-column {
+    min-height: 220px;
+    max-height: 220px;
+    padding: 0.7em;
   }
+}
 
-  .user-info p {
-    margin: 0 0;
-    font-weight: 600;
-    font-size: x-small;
+.booking-section-horizontal {
+  display: flex;
+  gap: 2em;
+  margin: 2em 0;
+  justify-content: space-between;
+}
+.booking-calendar, .booking-time, .booking-services {
+  flex: 1 1 0;
+  min-width: 220px;
+  max-width: 340px;
+}
+.booking-services input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+  accent-color: #d4a017;
+}
+@media (max-width: 950px) {
+  .booking-section-horizontal {
+    flex-direction: column;
+    gap: 1.5em;
   }
 }

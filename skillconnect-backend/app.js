@@ -18,8 +18,10 @@ const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const { v4: uuidv4 } = require('uuid');
 const geocodeAddress = require("./utils/geocode");
+const path = require("path");
 
 app.use(express.json());
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 const allowedOrigins = [
   "http://localhost:3000",
@@ -164,19 +166,39 @@ app.post("/loginUser", async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) return res.send({ error: "User Not Found" });
 
+    // --- Suspension/rejection checks ---
+    if (user.userType === "business") {
+      if (user.isSuspended) {
+        return res.status(403).json({ status: "suspended", error: "Your business account is suspended. Please contact support." });
+      }
+      if (user.isRejected) {
+        return res.status(403).json({ status: "rejected", error: "Your business account was rejected." });
+      }
+    }
+    // --- End checks ---
+
     const hashed = user.hashedPassword;
     if (!hashed) return res.status(400).json({ status: "error", error: "No password set for user" });
 
     const isPasswordValid = await bcrypt.compare(password, hashed);
     if (!isPasswordValid) return res.status(400).json({ status: "error", error: "Invalid Password" });
 
-    const token = jwt.sign({ email: user.email }, JWT_SECRET, { expiresIn: "50m" });
+    // --- Issue token ---
+    let token;
+    if (user.userType === "admin") {
+      // No expiration for admin
+      token = jwt.sign({ email: user.email }, JWT_SECRET);
+    } else {
+      // 50m expiration for others
+      token = jwt.sign({ email: user.email }, JWT_SECRET, { expiresIn: "50m" });
+    }
 
     return res.status(201).json({
         status: "success",
         data: token,
         userType: user.userType,
-        isVerifiedBusiness: user.isVerifiedBusiness
+        isVerifiedBusiness: user.isVerifiedBusiness,
+        user: { _id: user._id } // <-- add this line
     });
 });
 
@@ -320,6 +342,44 @@ app.post("/book", async (req, res) => {
       );
     }
 
+    // --- EMAIL NOTIFICATION LOGIC STARTS HERE ---
+    // Fetch customer and provider info
+    const customer = await User.findOne({ _id: customerId });
+    const provider = await User.findOne({ _id: providerId });
+
+    if (customer && provider && customer.email && provider.email) {
+      const transporter = nodemailer.createTransport({
+        service: "gmail",
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS,
+        },
+      });
+
+      const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: [customer.email, provider.email],
+        subject: "SkillConnect Booking Confirmation",
+        text: `A new booking has been made!
+
+Service(s): ${serviceCategory}
+Date: ${date}
+Time: ${time}
+
+Customer: ${customer.firstName} ${customer.lastName} (${customer.email})
+Provider: ${provider.firstName} ${provider.lastName} (${provider.email})
+
+Thank you for using SkillConnect!`,
+      };
+
+      transporter.sendMail(mailOptions, (err, info) => {
+        if (err) {
+          console.error("Failed to send booking email:", err);
+        }
+      });
+    }
+    // --- EMAIL NOTIFICATION LOGIC ENDS HERE ---
+
     res.json({ status: "ok", data: booking });
   } catch (error) {
     console.error("Booking error:", error);
@@ -419,6 +479,32 @@ app.get("/provider/:id/unavailable", async (req, res) => {
   }
 });
 
+// Update provider skills
+app.post("/provider/:id/skills", async (req, res) => {
+  const { id } = req.params;
+  const { skills } = req.body;
+  if (!Array.isArray(skills)) {
+    return res.status(400).json({ status: "error", error: "Skills must be an array" });
+  }
+  try {
+    await User.updateOne({ _id: id }, { $set: { skills } });
+    res.json({ status: "ok" });
+  } catch (error) {
+    res.status(500).json({ status: "error", error: "Failed to update skills" });
+  }
+});
+
+// Get provider skills
+app.get("/provider/:id/skills", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const user = await User.findOne({ _id: id, userType: "business" }).select("skills");
+    if (!user) return res.status(404).json({ status: "error", error: "Provider not found" });
+    res.json({ status: "ok", skills: user.skills || [] });
+  } catch (error) {
+    res.status(500).json({ status: "error", error: "Failed to fetch skills" });
+  }
+});
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -447,29 +533,29 @@ app.post("/register-business", businessUpload, async (req, res) => {
   const verificationDocuments = [
     {
       documentType: "nbi_clearance",
-      fileReference: files.nbiClearance?.[0]?.filename
-        ? `/uploads/${files.nbiClearance[0].filename}`
+      fileReference: files.nbiClearance?.[0]?.path
+        ? files.nbiClearance[0].path
         : "",
       status: files.nbiClearance?.[0] ? "uploaded" : "missing",
     },
     {
       documentType: "barangay_clearance",
-      fileReference: files.barangayClearance?.[0]?.filename
-        ? `/uploads/${files.barangayClearance[0].filename}`
+      fileReference: files.barangayClearance?.[0]?.path
+        ? files.barangayClearance[0].path
         : "",
       status: files.barangayClearance?.[0] ? "uploaded" : "missing",
     },
     {
       documentType: "training_certificate",
-      fileReference: files.certificate?.[0]?.filename
-        ? `/uploads/${files.certificate[0].filename}`
+      fileReference: files.certificate?.[0]?.path
+        ? files.certificate[0].path
         : "",
       status: files.certificate?.[0] ? "uploaded" : "missing",
     },
     {
       documentType: "government_id",
-      fileReference: files.governmentId?.[0]?.filename
-        ? `/uploads/${files.governmentId[0].filename}`
+      fileReference: files.governmentId?.[0]?.path
+        ? files.governmentId[0].path
         : "",
       status: files.governmentId?.[0] ? "uploaded" : "missing",
     },
@@ -521,6 +607,124 @@ app.post("/admin/verify-business", async (req, res) => {
   }
 });
 
+// Suspend business
+app.post("/admin/suspend-business", async (req, res) => {
+  const { businessId, reason } = req.body;
+  try {
+    const user = await User.findById(businessId);
+    if (!user) return res.status(404).json({ status: "error", error: "Business not found" });
+
+    // Send suspension email
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
+    });
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: user.email,
+      subject: "SkillConnect Business Account Suspended",
+      text: `Your business account has been suspended for the following reason:\n\n${reason}\n\nPlease contact support for more information.`,
+    });
+
+    user.isSuspended = true;
+    await user.save();
+    res.json({ status: "ok" });
+  } catch (error) {
+    res.status(500).json({ status: "error", error: "Failed to suspend business" });
+  }
+});
+
+// Unsuspend business
+app.post("/admin/unsuspend-business", async (req, res) => {
+  const { businessId } = req.body;
+  try {
+    const user = await User.findById(businessId);
+    if (!user) return res.status(404).json({ status: "error", error: "Business not found" });
+
+    user.isSuspended = false;
+    await user.save();
+
+    // Send unsuspension email
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
+    });
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: user.email,
+      subject: "SkillConnect Business Account Unsuspended",
+      text: `Your business account has been unsuspended. You may now log in and continue using SkillConnect.`,
+    });
+
+    res.json({ status: "ok" });
+  } catch (error) {
+    res.status(500).json({ status: "error", error: "Failed to unsuspend business" });
+  }
+});
+
+// Reject business
+app.post("/admin/reject-business", async (req, res) => {
+  const { businessId, reason } = req.body;
+  try {
+    const user = await User.findById(businessId);
+    if (!user) return res.status(404).json({ status: "error", error: "Business not found" });
+
+    user.isRejected = true;
+    await user.save();
+
+    // Send rejection email
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
+    });
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: user.email,
+      subject: "SkillConnect Business Account Rejected",
+      text: `Your business account has been rejected for the following reason:\n\n${reason}\n\nYou may reapply or contact support for more information.`,
+    });
+
+    res.json({ status: "ok" });
+  } catch (error) {
+    res.status(500).json({ status: "error", error: "Failed to reject business" });
+  }
+});
+
+// Delete user except username
+app.post("/admin/delete-rejected-user", async (req, res) => {
+  const { userId } = req.body;
+  try {
+    const user = await User.findOne({ _id: userId });
+    if (!user) return res.status(404).json({ status: "error", error: "User not found" });
+    if (!user.isRejected) return res.status(400).json({ status: "error", error: "User is not rejected" });
+
+    // Keep username, delete all other fields
+    await User.updateOne({ _id: userId }, {
+      $set: { 
+        phoneNumber: null,
+        email: null,
+        hashedPassword: null,
+        userType: null,
+        firstName: null,
+        lastName: null,
+        address: {},
+        isVerifiedBusiness: null,
+        verificationDocuments: [],
+        serviceCategory: null,
+        unavailableSlots: [],
+        location: {},
+        skills: [],
+        isSuspended: null,
+        isRejected: null
+      }
+    });
+    res.json({ status: "ok" });
+  } catch (error) {
+    res.status(500).json({ status: "error", error: "Failed to delete user data" });
+  }
+});
+
+
 // Get all customers (users with userType "customer")
 app.get("/admin/customers", async (req, res) => {
   try {
@@ -535,15 +739,28 @@ app.get("/admin/customers", async (req, res) => {
 app.get("/businesses", async (req, res) => {
   try {
     const allBusinesses = await User.find({ userType: "business" });
-    const pending = allBusinesses.filter(biz => !biz.isVerifiedBusiness);
-    const verified = allBusinesses.filter(biz => biz.isVerifiedBusiness);
+
+    // Split businesses into categories
+    const pending = allBusinesses.filter(biz => !biz.isVerifiedBusiness && !biz.isRejected && !biz.isSuspended);
+    const verified = allBusinesses.filter(biz => biz.isVerifiedBusiness && !biz.isSuspended && !biz.isRejected);
+    const suspended = allBusinesses.filter(biz => biz.isSuspended && !biz.isRejected);
+    const rejected = allBusinesses.filter(biz => biz.isRejected);
+
     res.json({
       pending: pending.map(biz => ({
-        id: biz._id, // frontend expects "id"
+        id: biz._id,
         ...biz._doc
       })),
       verified: verified.map(biz => ({
-        id: biz._id, // frontend expects "id"
+        id: biz._id,
+        ...biz._doc
+      })),
+      suspended: suspended.map(biz => ({
+        id: biz._id,
+        ...biz._doc
+      })),
+      rejected: rejected.map(biz => ({
+        id: biz._id,
         ...biz._doc
       }))
     });
@@ -623,24 +840,44 @@ app.post("/admin/send-verification-email", async (req, res) => {
 
 // Images
 app.post("/upload-image", upload.single("image"), async (req, res) => {
-    const imageName = req.file.filename;
-    const { userId } = req.body;
     try {
-        await Images.create({ image: imageName, userId });
-        res.json({ status: "ok", image: imageName });
+        if (!req.file) {
+            console.error("No file uploaded:", req.file);
+            return res.status(400).json({ status: "error", error: "No file uploaded" });
+        }
+        const imageUrl = req.file.path; // Cloudinary URL
+        const { userId, type } = req.body;
+        if (!userId) {
+            console.error("No userId provided in upload-image");
+            return res.status(400).json({ status: "error", error: "No userId provided" });
+        }
+        await Images.create({ _id: uuidv4(), image: imageUrl, userId, type: type || "gallery" });
+        res.json({ status: "ok", image: imageUrl });
     } catch (error) {
-        res.json({ status: "error", error });
+        console.error("Upload image error:", error);
+        res.status(500).json({ status: "error", error: error.message || error });
     }
 });
 
 app.get("/user-profile-image/:userId", async (req, res) => {
     try {
-        const img = await Images.findOne({ userId: req.params.userId }).sort({ _id: -1 });
+        const img = await Images.findOne({ userId: req.params.userId, type: "profile" }).sort({ _id: -1 });
         if (!img) return res.json({ status: "not_found" });
         res.json({ status: "ok", image: img.image });
     } catch (error) {
         res.json({ status: "error", error });
     }
+});
+
+// Get all gallery images for a provider
+app.get("/provider/:id/gallery", async (req, res) => {
+  try {
+    const Images = mongoose.model("images");
+    const images = await Images.find({ userId: req.params.id, type: "gallery" }).sort({ _id: -1 });
+    res.json({ status: "ok", data: images });
+  } catch (error) {
+    res.status(500).json({ status: "error", error: "Failed to fetch gallery images" });
+  }
 });
 
 // Update /send-personel-incharge to use Cloudinary storage
@@ -671,7 +908,7 @@ app.post("/send-personel-incharge", upload.single("image"), async (req, res) => 
     let mailOptions = {
       from: '"SkillConnect" <' + process.env.EMAIL_USER + '>',
       to: [customerEmail, providerEmail],
-      subject: "Personnel In-Charge Details",
+      subject: "Personnel in-charge Details",
       text: `Dear ${booking.customerId.firstName || "Customer"},\n\nPersonnel in-charge details:\n${description}`,
       html: `<p>Dear ${booking.customerId.firstName || "Customer"},</p>
              <p><b>Personnel in-charge details:</b></p>
@@ -858,4 +1095,21 @@ app.get("/", (req, res) => {
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
     console.log(`Server started on port ${PORT}`);
+});
+
+app.delete("/provider/:providerId/gallery/:imageId", async (req, res) => {
+  try {
+    const { providerId, imageId } = req.params;
+    const image = await Images.findOne({ _id: imageId, userId: providerId });
+    if (!image) return res.status(404).json({ status: "error", error: "Image not found" });
+
+    // Optionally: delete from Cloudinary as well (if you want)
+    const publicId = image.image.split('/').pop().split('.')[0];
+    await cloudinary.uploader.destroy(publicId);
+
+    await Images.deleteOne({ _id: imageId });
+    res.json({ status: "ok" });
+  } catch (error) {
+    res.status(500).json({ status: "error", error: "Failed to delete image" });
+  }
 });

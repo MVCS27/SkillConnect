@@ -5,13 +5,13 @@ import { useNavigate } from "react-router-dom";
 import { faStar as solidStar } from "@fortawesome/free-solid-svg-icons";
 import { faStar as regularStar } from "@fortawesome/free-regular-svg-icons";
 
-import NavbarLogedIn from "../components/navbar-logedin";
-import { logOutUser } from "../controllers/logout";
-import API_BASE_URL from "../config/api";
-import CompleteProcess from "../components/complete-process"; // import at top
-import RatingModal from "../components/rating"; // import the rating modal
+import NavbarLogedIn from "../../components/navbar-logedin";
+import { logOutUser } from "../../controllers/logout";
+import API_BASE_URL from "../../config/api";
+import CompleteProcess from "../../components/complete-process"; // import at top
+import RatingModal from "../../components/rating"; // import the rating modal
 
-import "../assets/styles/profile.css";
+import "../../assets/styles/profile.css";
 
 export default function UserDetails() {
   const [userData, setUserData] = useState({});
@@ -70,7 +70,7 @@ export default function UserDetails() {
           .then(res => res.json())
           .then(imgData => {
             if (imgData.status === "ok" && imgData.image) {
-              setProfileImage(`${API_BASE_URL}/images/${imgData.image}`);
+              setProfileImage(imgData.image); // Use the URL directly!
             }
           });
         }
@@ -120,9 +120,10 @@ export default function UserDetails() {
           </div>
     
           <img
-            src={profileImage || "https://placehold.co/100x100"}
-            alt="Profile"
-            className="profile-image"
+          src={profileImage}
+          alt="Profile"
+          className="profile-image"
+          onError={e => { e.target.onerror = null; e.target.src = "https://placehold.co/100x100?text=No+Image"; }}
           />
 
         </div>
@@ -158,7 +159,7 @@ export default function UserDetails() {
                       </p>
                       <p>Email: {booking.providerId?.email || "N/A"}</p>
                       <p>Phone: {booking.providerId?.phoneNumber || "N/A"}</p>
-                      <p>Service: {booking.providerId?.serviceCategory || "N/A"}</p>
+                      <p>Service: {booking.serviceCategory}</p>
                       <button onClick={() => cancelBooking(booking._id)}>Cancel</button>
                     </div>
                   ))}
@@ -262,7 +263,7 @@ export default function UserDetails() {
 
         <div className="financial-section">
           <h3>Financial Services</h3>
-          <div className="financial-item">Cash on Delivery</div>
+          <div className="financial-item">Cash on Service</div>
           <div className="financial-item">QR Code</div>
         </div>
 
@@ -338,7 +339,14 @@ export default function UserDetails() {
         onClose={() => setShowRatingModal(false)}
         onSuccess={() => {
           setShowRatingModal(false);
-          // Optionally refresh bookings or ratings here
+          // Refresh bookings and ratings
+          fetch(`${API_BASE_URL}/bookings/customer/${userData._id}`)
+            .then(res => res.json())
+            .then(bookingData => {
+              if (bookingData.status === "ok") setBookings(bookingData.data);
+            });
+          // Optionally, also refresh ratings
+          // ...fetch ratings logic here...
         }}
       />
     </div>

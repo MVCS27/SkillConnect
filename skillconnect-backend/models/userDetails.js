@@ -51,6 +51,12 @@ const UserDetailsSchema = new mongoose.Schema(
       lat: Number,
       lng: Number
     },
+    skills: {
+      type: [String],
+      default: [],
+    },
+    isSuspended: { type: Boolean, default: false },
+    isRejected: { type: Boolean, default: false },
   },
   {
     collection: "users",

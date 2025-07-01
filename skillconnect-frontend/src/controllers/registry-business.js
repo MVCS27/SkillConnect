@@ -46,6 +46,7 @@ export class RegistryBusiness {
       confirmPassword,
       address,
       serviceCategory,
+      serviceCategoryOther, // <-- add this
       nbiClearance,
       barangayClearance,
       certificate,
@@ -63,10 +64,17 @@ export class RegistryBusiness {
     formData.append("username", username);
     formData.append("firstName", firstName);
     formData.append("lastName", lastName);
-    formData.append("phoneNumber", phoneNumber); // changed from mobile
+    formData.append("phoneNumber", phoneNumber);
     formData.append("email", email);
     formData.append("password", password);
-    formData.append("serviceCategory", serviceCategory);
+
+    // Use the custom value if "others" is selected
+    let finalServiceCategory = serviceCategory;
+    if (serviceCategory === "others" && serviceCategoryOther) {
+      finalServiceCategory = serviceCategoryOther;
+    }
+    formData.append("serviceCategory", finalServiceCategory);
+
     formData.append("userType", "business");
     formData.append("address", JSON.stringify(address));
 
@@ -86,7 +94,6 @@ export class RegistryBusiness {
       .then((data) => {
         console.log(data, "businessRegister");
 
-        // Update this line based on actual backend value
         if (data.status === "success") {
           window.location.href = "/account-verify";
         } else {

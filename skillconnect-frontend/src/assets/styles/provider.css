@@ -9,9 +9,22 @@
 
 .provider-row {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap; /* Prevent wrapping to new line */
   gap: 1.5em;
   margin-bottom: 2em;
+  overflow-x: auto;
+  padding-bottom: 1em;
+  scrollbar-width: thin;
+  scrollbar-color: #f6cd41 #fff;
+}
+
+/* Optional: Custom scrollbar for Webkit browsers */
+.provider-row::-webkit-scrollbar {
+  height: 8px;
+}
+.provider-row::-webkit-scrollbar-thumb {
+  background: #f6cd41;
+  border-radius: 4px;
 }
 
 .provider-grid {
@@ -22,9 +35,10 @@
 }
 
 .provider-card {
-  width: 20%;
-  max-width: 20%;
-  margin: auto;
+  flex: 0 0 260px;
+  max-width: 260px;
+  min-width: 220px;
+  margin: auto 0;
   border: 3px solid #f6cd41;
   border-radius: 20px;
   padding: 0.75rem;
@@ -57,4 +71,44 @@
 .provider-distance {
   font-size: 0.85rem;
   color: #333;
+}
+
+@media (max-width: 950px) and (min-width: 769px) {
+  .provider-sections {
+    margin: 7em 0 0 0;
+  }
+  .provider-grid {
+    margin-top: 6em;
+    gap: 0.5rem;
+  }
+  .provider-card {
+    width: 45%;
+    max-width: 45%;
+    margin-bottom: 1em;
+    padding: 0.5rem;
+  }
+  .provider-image {
+    height: 10em;
+  }
+}
+
+@media (max-width: 768px) {
+  .provider-sections {
+    margin: 6em 0 0 0;
+  }
+  .provider-row,
+  .provider-grid {
+    flex-direction: column;
+    gap: 0.5em;
+    margin-top: 0.5em;
+  }
+  .provider-card {
+    width: 45%;
+    max-width: 45%;
+    margin-bottom: 1em;
+    padding: 0.5rem;
+  }
+  .provider-image {
+    height: 7em;
+  }
 }

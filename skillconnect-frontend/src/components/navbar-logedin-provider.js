@@ -1,10 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {
-  faGear,
-  faRightFromBracket,
-} from '@fortawesome/free-solid-svg-icons';
+import { faGear, faRightFromBracket, faImages} from '@fortawesome/free-solid-svg-icons';
 
 import '../assets/styles/navbar.css';
 import logo from '../assets/images/Skill.png';
@@ -57,6 +54,21 @@ function NavbarLogedInProvider() {
           <button onClick={() => navigate('/my-business-calendar')} className="profile-button">
             <FontAwesomeIcon icon={faGear} /> Calendar
           </button>
+
+          <button
+  onClick={() => {
+    const providerId = window.localStorage.getItem("userId"); // or whatever key you use
+    if (providerId) {
+      navigate(`/gallery-and-comments/${providerId}`);
+    } else {
+      alert("Provider ID not found.");
+    }
+  }}
+  className="profile-button"
+>
+  <FontAwesomeIcon icon={faImages} /> Gallery & Reviews
+</button>
+
 
           <button onClick={logOutUser} className="nav-button">
             <FontAwesomeIcon icon={faRightFromBracket} /> Log Out

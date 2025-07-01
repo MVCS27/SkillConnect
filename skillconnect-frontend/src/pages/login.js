@@ -122,7 +122,7 @@ export default class Login extends Component {
             {this.state.showAdminPopup && (
               <div className="admin-popup" style={{ background: "#fffbe6", border: "1px solid #f0e130", padding: 16, borderRadius: 8, marginBottom: 16 }}>
                 <p>Admin detected. <button type="button" onClick={this.handleSendAdminPassword} disabled={this.state.adminPasswordSent}>Send Password</button></p>
-                {this.state.adminPasswordSent && <p style={{ color: "green" }}>Password sent to skillconnect12345@gmail.com</p>}
+                {this.state.adminPasswordSent && <p style={{ color: "green" }}>Password sent to admin</p>}
                 {this.state.adminError && <p style={{ color: "red" }}>{this.state.adminError}</p>}
               </div>
             )}

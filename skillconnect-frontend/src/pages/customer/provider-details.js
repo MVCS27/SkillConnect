@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import API_BASE_URL from "../config/api";
+import API_BASE_URL from "../../config/api";
 import DatePicker from "react-datepicker";
-import NavbarLogedIn from "../components/navbar-logedin";
+import NavbarLogedIn from "../../components/navbar-logedin";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faStar as solidStar } from "@fortawesome/free-solid-svg-icons";
 import { faStar as regularStar } from "@fortawesome/free-regular-svg-icons";
+import ProviderGallery from "../../components/ProviderGallery";
 
 import "react-datepicker/dist/react-datepicker.css";
-import "../assets/styles/profile.css";
-import "../assets/styles/calendar.css";
+import "../../assets/styles/profile.css";
+import "../../assets/styles/calendar.css";
 
 export default function ProviderDetails() {
   const { id } = useParams(); // providerId
@@ -23,6 +24,9 @@ export default function ProviderDetails() {
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTime, setSelectedTime] = useState("");
   const [unavailableSlots, setUnavailableSlots] = useState([]);
+  const [selectedService, setSelectedService] = useState("");
+  const [selectedServices, setSelectedServices] = useState([]);
+  const [customTime, setCustomTime] = useState(""); // New state for custom time
 
   // Fetch provider info
   useEffect(() => {
@@ -31,14 +35,21 @@ export default function ProviderDetails() {
       .then((data) => {
         if (data.status === "ok") {
           setProvider(data.data);
-
+          // Fetch provider skills
+          fetch(`${API_BASE_URL}/provider/${data.data._id}/skills`)
+            .then(res => res.json())
+            .then(skillData => {
+              if (skillData.status === "ok") {
+                setProvider(prev => ({ ...prev, skills: skillData.skills || [] }));
+              }
+            });
           // Fetch provider image
           fetch(`${API_BASE_URL}/user-profile-image/${data.data._id}`) // <-- use _id
             .then((res) => res.json())
             .then((imgData) => {
               setProviderImage(
                 imgData.status === "ok"
-                  ? `${API_BASE_URL}/images/${imgData.image}`
+                  ? imgData.image // Use the URL directly!
                   : "https://placehold.co/100x100?text=No+Image"
               );
             });
@@ -148,8 +159,8 @@ export default function ProviderDetails() {
     : [];
 
   const timeOptions = [
-    "08:00", "09:00", "10:00", "11:00", "12:00",
-    "13:00", "14:00", "15:00", "16:00", "17:00"
+    "08:00 AM", "09:00 AM", "10:00 AM", "11:00 AM", "12:00 PM",
+    "1:00 PM", "2:00 PM", "3:00 PM", "4:00 PM", "5:00 PM"
   ];
 
   if (!provider) return <div>Loading provider details...</div>;
@@ -157,7 +168,6 @@ export default function ProviderDetails() {
   return (
     <div className="provider-details">
       <NavbarLogedIn />
-
       <div className="user-profile">
         <button onClick={() => navigate("/provider-list")} className="detail-button">
           ← Back to List
@@ -174,42 +184,47 @@ export default function ProviderDetails() {
             </p>
           </div>
           <img
-            src={providerImage || "https://placehold.co/100x100?text=No+Image"}
+            src={providerImage}
             alt="Provider"
             className="profile-image"
+            onError={e => { e.target.onerror = null; e.target.src = "https://placehold.co/100x100?text=No+Image"; }}
           />
         </div>
 
         <hr />
 
         {customerData && (
-          <div>
+          <div className="booking-section">
             <h4>Book a Date and Time</h4>
-            <DatePicker
-              selected={selectedDate}
-              onChange={setSelectedDate}
-              dateFormat="yyyy-MM-dd"
-              minDate={new Date()}
-              placeholderText="Select a date"
-              filterDate={date => {
-                // Format date as yyyy-mm-dd in local time
-                const dateStr = date.getFullYear() + "-" +
-                  String(date.getMonth() + 1).padStart(2, "0") + "-" +
-                  String(date.getDate()).padStart(2, "0");
-                const slot = unavailableSlots.find(slot => slot.date === dateStr);
-                return !slot || slot.times.length < timeOptions.length;
-              }}
-              dayClassName={date =>
-                date < new Date().setHours(0,0,0,0) ? "react-datepicker__day--disabled" : undefined
-              }
-              inline // <-- This makes the calendar always visible
-            />
-            {selectedDate && (
-              <div>
+            <div className="booking-section-horizontal">
+              {/* Calendar */}
+              <div className="booking-calendar">
+                <DatePicker
+                  selected={selectedDate}
+                  onChange={setSelectedDate}
+                  dateFormat="yyyy-MM-dd"
+                  minDate={new Date()}
+                  placeholderText="Select a date"
+                  filterDate={date => {
+                    const dateStr = date.getFullYear() + "-" +
+                      String(date.getMonth() + 1).padStart(2, "0") + "-" +
+                      String(date.getDate()).padStart(2, "0");
+                    const slot = unavailableSlots.find(slot => slot.date === dateStr);
+                    return !slot || slot.times.length < timeOptions.length;
+                  }}
+                  dayClassName={date =>
+                    date < new Date().setHours(0,0,0,0) ? "react-datepicker__day--disabled" : undefined
+                  }
+                  inline
+                />
+              </div>
+              {/* Time Selection */}
+              <div className="booking-time">
                 <label>Select Time:</label>
                 <select
                   value={selectedTime}
                   onChange={e => setSelectedTime(e.target.value)}
+                  style={{ width: "100%", marginBottom: 10 }}
                 >
                   <option value="">Select time</option>
                   {timeOptions.map(time => (
@@ -221,13 +236,62 @@ export default function ProviderDetails() {
                       {time} {unavailableTimes.includes(time) ? "(Unavailable)" : ""}
                     </option>
                   ))}
+                  <option value="custom">Custom Time</option>
                 </select>
+                {selectedTime === "custom" && (
+                  <input
+                    type="time"
+                    value={customTime}
+                    onChange={e => setCustomTime(e.target.value)}
+                    style={{ width: "100%", marginTop: 5 }}
+                  />
+                )}
+                {customTime && (
+                  <div style={{ color: unavailableTimes.includes(customTime) ? "red" : "green", fontSize: 13 }}>
+                    {unavailableTimes.includes(customTime)
+                      ? "This time is unavailable."
+                      : "This time is available."}
+                  </div>
+                )}
               </div>
-            )}
+              {/* Services Selection */}
+              <div className="booking-services">
+                <label>Select Services:</label>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "14px", margin: "10px 0" }}>
+                  {provider.skills && provider.skills.map(skill => (
+                    <label key={skill} style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "1.1em" }}>
+                      <input
+                        type="checkbox"
+                        value={skill}
+                        checked={selectedServices.includes(skill)}
+                        onChange={e => {
+                          if (e.target.checked) {
+                            setSelectedServices(prev => [...prev, skill]);
+                          } else {
+                            setSelectedServices(prev => prev.filter(s => s !== skill));
+                          }
+                        }}
+                        style={{ width: "20px", height: "20px" }}
+                      />
+                      {skill}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
             <button
               onClick={async () => {
                 if (!selectedDate || !selectedTime) {
                   alert("Please select date and time.");
+                  return;
+                }
+                if (!selectedServices.length) {
+                  alert("Please select at least one service.");
+                  return;
+                }
+                const bookingTime = selectedTime === "custom" ? customTime : selectedTime;
+                if (!bookingTime || unavailableTimes.includes(bookingTime)) {
+                  alert("Please select a valid and available time.");
                   return;
                 }
                 setBookingLoading(true);
@@ -242,7 +306,7 @@ export default function ProviderDetails() {
                     body: JSON.stringify({
                       customerId: customerData._id,
                       providerId: provider._id,
-                      serviceCategory: provider.serviceCategory,
+                      serviceCategory: selectedServices.join(", "), // send as comma-separated string
                       date: dateStr,
                       time: selectedTime,
                     }),
@@ -267,6 +331,10 @@ export default function ProviderDetails() {
           </div>
         )}
 
+        {/* GALLERY: Show here, above ratings */}
+        <ProviderGallery providerId={provider?._id} canUpload={false} />
+
+        {/* RATINGS */}
         <div className="provider-comments">
           <h4>Ratings & Comments</h4>
           {ratings.length === 0 && <p>No ratings yet.</p>}

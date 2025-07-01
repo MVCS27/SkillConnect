@@ -55,9 +55,9 @@ function UpdateUser() {
     if (location.state && location.state._id) {
       fetch(`${API_BASE_URL}/user-profile-image/${location.state._id}`)
         .then(res => res.json())
-        .then(data => {
-          if (data.status === "ok" && data.image) {
-            setProfileImage(`${API_BASE_URL}/images/${data.image}`);
+        .then(imgData => {
+          if (imgData.status === "ok" && imgData.image) {
+            setProfileImage(imgData.image); // Use the URL directly
           }
         });
     }
@@ -83,11 +83,15 @@ function UpdateUser() {
     const formData = new FormData();
     formData.append("image", profileImageFile);
     formData.append("userId", userId);
+    formData.append("type", "profile");
 
-    await fetch(`${API_BASE_URL}/upload-image`, {
+    const res = await fetch(`${API_BASE_URL}/upload-image`, {
       method: "POST",
       body: formData,
     });
+    const result = await res.json();
+    console.log("Upload result:", result);
+    return result;
   };
 
   const updateData = async () => {
@@ -136,7 +140,10 @@ function UpdateUser() {
     const data = await response.json();
     if (data.status === "ok") {
       if (profileImageFile) {
-        await uploadProfileImage(location.state._id);
+        const imgRes = await uploadProfileImage(location.state._id);
+        if (imgRes.status !== "ok") {
+          alert("Image upload failed: " + (imgRes.error || "Unknown error"));
+        }
       }
       window.location.href = "/customer-profile";
     } else {
@@ -153,8 +160,8 @@ function UpdateUser() {
             src={profileImage || "https://placehold.co/100x100"}
             alt="Profile"
             className="profile-image"
-            style={{ width: '8em', height: '12em', 
-              borderRadius: "50% / 30%", objectFit: "cover", margin: '.5em 2em' }}
+            style={{ width: '8em', height: '12em', borderRadius: "50% / 30%", objectFit: "cover", margin: '.5em 2em' }}
+            onError={e => { e.target.onerror = null; e.target.src = "https://placehold.co/100x100"; }}
           />
           <input
             type="file"

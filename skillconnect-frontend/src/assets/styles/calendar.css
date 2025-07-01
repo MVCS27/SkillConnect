@@ -11,3 +11,41 @@
   pointer-events: none;
   background: #f0f0f0 !important;
 }
+
+@media (max-width: 950px) and (min-width: 769px) {
+  .calendar-container {
+    width: 95vw;
+    margin: 8em 1em;
+  }
+}
+
+@media (max-width: 768px) {
+  .calendar-container {
+    width: 100vw;
+    margin: 7em 0.5em;
+    padding: 0;
+  }
+}
+
+.booking-section-horizontal {
+  display: flex;
+  gap: 2em;
+  margin: 2em 0;
+  justify-content: space-between;
+}
+.booking-calendar, .booking-time, .booking-services {
+  flex: 1 1 0;
+  min-width: 220px;
+  max-width: 340px;
+}
+.booking-time input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+  accent-color: #d4a017;
+}
+@media (max-width: 950px) {
+  .booking-section-horizontal {
+    flex-direction: column;
+    gap: 1.5em;
+  }
+}

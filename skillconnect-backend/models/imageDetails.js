@@ -1,14 +1,15 @@
 const mongoose = require("mongoose");
 
-const ImageDetailsSchema = new mongoose.Schema(
+const imageDetailsSchema = new mongoose.Schema(
     {
-        _id: { type: String, required: true }, // string _id as primary key
+        _id: { type: String, required: true }, // <-- Add this line!
         image: String,
-        userId: { type: String, ref: "users" }, // string _id
+        userId: String,
+        type: { type: String, default: "gallery" }, // "profile" or "gallery"
     },
     {
         collection: "images",
     }
 );
 
-mongoose.model("images", ImageDetailsSchema);
+mongoose.model("images", imageDetailsSchema);

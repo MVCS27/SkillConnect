@@ -35,6 +35,7 @@ export class LoginHelper {
             window.localStorage.setItem("token", data.data);
             window.localStorage.setItem("userType", data.userType);
             window.localStorage.setItem("loggedIn", true);
+            window.localStorage.setItem("userId", data.user._id); // Store userId
 
             if (data.userType === "admin") {
               window.location.href = "/admin-dashboard";
@@ -49,6 +50,10 @@ export class LoginHelper {
             } else {
               alert("Unknown user type: " + data.userType);
             }
+          } else if (data.status === "suspended") {
+            alert(data.error || "Your business account is suspended.");
+          } else if (data.status === "rejected") {
+            alert(data.error || "Your business account was rejected.");
           } else {
             alert("Invalid credentials or login failed.");
           }

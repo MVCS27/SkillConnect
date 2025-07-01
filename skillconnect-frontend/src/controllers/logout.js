@@ -2,5 +2,5 @@
 
 export const logOutUser = () => {
   window.localStorage.clear();
-  window.location.href = "./landing-page";
+  window.location.href = "/landing-page";
 };

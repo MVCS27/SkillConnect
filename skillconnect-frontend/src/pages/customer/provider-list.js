@@ -1,17 +1,21 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import "../assets/styles/provider.css";
-import NavbarLogedIn from "../components/navbar-logedin";
-import API_BASE_URL from "../config/api";
+import "../../assets/styles/provider.css";
+import NavbarLogedIn from "../../components/navbar-logedin";
+import API_BASE_URL from "../../config/api";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faStar as solidStar } from "@fortawesome/free-solid-svg-icons";
 import { faStar as regularStar } from "@fortawesome/free-regular-svg-icons";
 
-const SERVICE_CATEGORIES = [
+const MAIN_CATEGORIES = [
   "Plumber",
   "Electrician",
   "Cleaner",
-  "Technician",
+  "Technician"
+];
+
+const SERVICE_CATEGORIES = [
+  ...MAIN_CATEGORIES,
   "Others"
 ];
 
@@ -38,8 +42,8 @@ export default function ProviderList() {
               .then(imgData => {
                 setProviderImages(prev => ({
                   ...prev,
-                  [provider._id]: imgData.status === "ok"
-                    ? `${API_BASE_URL}/images/${imgData.image}`
+                  [provider._id]: imgData.status === "ok" && imgData.image
+                    ? imgData.image // <-- Use the URL directly!
                     : "https://placehold.co/100x100?text=No+Image"
                 }));
               });
@@ -104,11 +108,23 @@ export default function ProviderList() {
       const name = `${provider.firstName} ${provider.lastName}`.toLowerCase();
       const service = (provider.serviceCategory || "").toLowerCase();
       const search = searchValue.toLowerCase();
-      const matchCategory = category ? (provider.serviceCategory === category) : true;
-      return (
-        (!search || name.includes(search) || service.includes(search)) &&
-        matchCategory
-      );
+
+      if (category === "Others") {
+        // Show providers whose serviceCategory is NOT in the main categories
+        const isOther = !MAIN_CATEGORIES.map(c => c.toLowerCase()).includes(service);
+        return (
+          (!search || name.includes(search) || service.includes(search)) &&
+          isOther
+        );
+      } else if (category) {
+        // Normal category match
+        return (
+          (!search || name.includes(search) || service.includes(search)) &&
+          provider.serviceCategory === category
+        );
+      }
+      // No category filter
+      return (!search || name.includes(search) || service.includes(search));
     });
   };
 
@@ -124,6 +140,7 @@ export default function ProviderList() {
             src={providerImages[provider._id] || "https://placehold.co/100x100?text=No+Image"}
             alt="Profile"
             className="provider-image"
+            onError={e => { e.target.onerror = null; e.target.src = "https://placehold.co/100x100?text=No+Image"; }}
           />
           <p className="provider-name">{provider.firstName} {provider.lastName}</p>
           <p className="provider-service">{provider.serviceCategory}</p>

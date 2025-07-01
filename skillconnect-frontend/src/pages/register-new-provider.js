@@ -336,7 +336,6 @@ export default class ProviderSignUp extends Component {
                 accept=".pdf,image/*"
                 className="form-control"
                 onChange={(e) => this.setState({ nbiClearance: e.target.files[0] })}
-                required
               />
             </div>
 
@@ -347,7 +346,6 @@ export default class ProviderSignUp extends Component {
                 accept=".pdf,image/*"
                 className="form-control"
                 onChange={(e) => this.setState({ barangayClearance: e.target.files[0] })}
-                required
               />
             </div>
 
@@ -358,7 +356,6 @@ export default class ProviderSignUp extends Component {
                 accept=".pdf,image/*"
                 className="form-control"
                 onChange={(e) => this.setState({ certificate: e.target.files[0] })}
-                required
               />
             </div>
 

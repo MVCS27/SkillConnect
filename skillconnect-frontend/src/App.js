@@ -15,14 +15,17 @@ import AdminUsers from './pages/admin/admin-users';
 import AdminBookings from './pages/admin/admin-bookings'; 
 
 import UserSignUp from './pages/register-new-user';
-import Login from './pages/login';
-import UserDetails from './pages/userProfile';
-import BusinessDetails from './pages/businessProfile';
-import ProviderCalendar from './pages/provider-calendar';
 import ProviderSignUp from './pages/register-new-provider';
 import LandingPage from './pages/landing-page';
-import ProviderList from './pages/provider-list';
-import ProviderDetails from './pages/provider-details';
+import Login from './pages/login';
+
+import UserDetails from './pages/customer/userProfile';
+import ProviderList from './pages/customer/provider-list';
+import ProviderDetails from './pages/customer/provider-details';
+
+import BusinessDetails from './pages/provider/businessProfile';
+import ProviderCalendar from './pages/provider/provider-calendar';
+import GalleryAndComments from './pages/provider/gallery-and-comments';
 
 import ImageUpload from './tests/imageUpload';
 import ProtectedRoute from './routes/routes';
@@ -36,7 +39,7 @@ function App() {
       <Routes>
 
         {/* Public Routes */}
-        <Route path="/" element={isLoggedIn ? <Navigate to={`/${userType}-profile`} /> : <LandingPage />} />
+        <Route path="/" element={isLoggedIn && userType ? <Navigate to={`/${userType}-profile`} /> : <LandingPage />} />
         <Route path="/landing-page" element={<LandingPage />} />
         <Route path="/sign-in" element={<Login />} />
         <Route path="/sign-up" element={<UserSignUp />} />
@@ -64,6 +67,7 @@ function App() {
             <>  
               <Route path="/business-profile" element={<BusinessDetails />} />
               <Route path="/my-business-calendar" element={<ProviderCalendar />} /> 
+              <Route path="/gallery-and-comments/:id" element={<GalleryAndComments />} />
             </>
           )}
 
