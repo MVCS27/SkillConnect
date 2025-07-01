@@ -7,6 +7,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faStar as solidStar } from "@fortawesome/free-solid-svg-icons";
 import { faStar as regularStar } from "@fortawesome/free-regular-svg-icons";
 import ProviderGallery from "../../components/ProviderGallery";
+import LocationModal from "../../components/LocationModal";
 
 import "react-datepicker/dist/react-datepicker.css";
 import "../../assets/styles/profile.css";
@@ -24,9 +25,10 @@ export default function ProviderDetails() {
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTime, setSelectedTime] = useState("");
   const [unavailableSlots, setUnavailableSlots] = useState([]);
-  const [selectedService, setSelectedService] = useState("");
   const [selectedServices, setSelectedServices] = useState([]);
   const [customTime, setCustomTime] = useState(""); // New state for custom time
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const [serviceLocation, setServiceLocation] = useState("");
 
   // Fetch provider info
   useEffect(() => {
@@ -44,12 +46,12 @@ export default function ProviderDetails() {
               }
             });
           // Fetch provider image
-          fetch(`${API_BASE_URL}/user-profile-image/${data.data._id}`) // <-- use _id
+          fetch(`${API_BASE_URL}/user-profile-image/${data.data._id}`)
             .then((res) => res.json())
             .then((imgData) => {
               setProviderImage(
                 imgData.status === "ok"
-                  ? imgData.image // Use the URL directly!
+                  ? imgData.image
                   : "https://placehold.co/100x100?text=No+Image"
               );
             });
@@ -87,7 +89,7 @@ export default function ProviderDetails() {
   // Fetch unavailable slots
   useEffect(() => {
     if (provider) {
-      fetch(`${API_BASE_URL}/provider/${provider._id}/unavailable`) // <-- use _id
+      fetch(`${API_BASE_URL}/provider/${provider._id}/unavailable`)
         .then((res) => res.json())
         .then((data) => {
           if (data.status === "ok") setUnavailableSlots(data.data);
@@ -106,49 +108,9 @@ export default function ProviderDetails() {
     }
   }, [provider]);
 
-  const handleBooking = async () => {
-    if (!customerData || !provider) {
-      alert("Booking info is incomplete.");
-      return;
-    }
-
-    const customerId = customerData._id;
-    const providerId = provider._id;
-    const serviceCategory = provider.serviceCategory;
-
-    if (!customerId || !providerId || !serviceCategory) {
-      alert("Booking failed: Missing information.");
-      return;
-    }
-
-    setBookingLoading(true);
-    try {
-      const response = await fetch(`${API_BASE_URL}/book`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ customerId, providerId, serviceCategory }),
-      });
-
-      const data = await response.json();
-      if (data.status === "ok") {
-        alert("Booking successful!");
-        navigate("/customer-profile");
-      } else {
-        console.error("Booking failed response:", data);
-        alert("Booking failed.");
-      }
-    } catch (error) {
-      console.error("Booking error:", error);
-      alert("Something went wrong.");
-    } finally {
-      setBookingLoading(false);
-    }
-  };
-
   // Get unavailable times for selected date
   const unavailableTimes = selectedDate
     ? (unavailableSlots.find(slot => {
-        // Use local date string for comparison
         const slotDate = new Date(slot.date + "T00:00:00");
         return (
           selectedDate.getFullYear() === slotDate.getFullYear() &&
@@ -259,10 +221,9 @@ export default function ProviderDetails() {
                 <label>Select Services:</label>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "14px", margin: "10px 0" }}>
                   {provider.skills && provider.skills.map(skill => (
-                    <label key={skill} style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "1.1em" }}>
+                    <label key={skill} style={{ display: "flex", alignItems: "center" }}>
                       <input
                         type="checkbox"
-                        value={skill}
                         checked={selectedServices.includes(skill)}
                         onChange={e => {
                           if (e.target.checked) {
@@ -280,35 +241,43 @@ export default function ProviderDetails() {
               </div>
             </div>
             <button
-              onClick={async () => {
+              onClick={() => {
                 if (!selectedDate || !selectedTime) {
                   alert("Please select date and time.");
                   return;
                 }
-                if (!selectedServices.length) {
-                  alert("Please select at least one service.");
-                  return;
-                }
-                const bookingTime = selectedTime === "custom" ? customTime : selectedTime;
-                if (!bookingTime || unavailableTimes.includes(bookingTime)) {
-                  alert("Please select a valid and available time.");
-                  return;
-                }
+                setShowLocationModal(true);
+              }}
+              disabled={bookingLoading}
+            >
+              {bookingLoading ? "Booking..." : "Book Now"}
+            </button>
+            {/* Step 3: Location Modal */}
+            <LocationModal
+              open={showLocationModal}
+              onClose={() => setShowLocationModal(false)}
+              onConfirm={async (coords) => {
+                setShowLocationModal(false);
+                setServiceLocation(coords);
                 setBookingLoading(true);
                 try {
-                  // Format date as yyyy-mm-dd in local time
                   const dateStr = selectedDate.getFullYear() + "-" +
                     String(selectedDate.getMonth() + 1).padStart(2, "0") + "-" +
                     String(selectedDate.getDate()).padStart(2, "0");
+                  const serviceCategory =
+                    selectedServices.length > 0
+                      ? selectedServices.join(", ")
+                      : "General";
                   const response = await fetch(`${API_BASE_URL}/book`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                       customerId: customerData._id,
                       providerId: provider._id,
-                      serviceCategory: selectedServices.join(", "), // send as comma-separated string
+                      serviceCategory,
                       date: dateStr,
-                      time: selectedTime,
+                      time: selectedTime === "custom" ? customTime : selectedTime,
+                      serviceLocation: coords, // send coordinates
                     }),
                   });
                   const data = await response.json();
@@ -324,14 +293,11 @@ export default function ProviderDetails() {
                   setBookingLoading(false);
                 }
               }}
-              disabled={bookingLoading}
-            >
-              {bookingLoading ? "Booking..." : "Book Now"}
-            </button>
+            />
           </div>
         )}
 
-               <hr />
+        <hr />
 
         {/* GALLERY: Show here, above ratings */}
         <h4>Work Showcase</h4>

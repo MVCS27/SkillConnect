@@ -79,6 +79,30 @@ async function geocodeWithLocationIQ(address) {
   return null;
 }
 
+// --- 4. Google Maps Geocoding API (Free Tier) ---
+async function geocodeWithGoogleMaps(address) {
+  try {
+    const res = await axios.get("https://maps.googleapis.com/maps/api/geocode/json", {
+      params: {
+        address,
+        key: process.env.GOOGLE_MAPS_API_KEY,
+      },
+    });
+
+    if (res.data && res.data.status === "OK" && res.data.results.length > 0) {
+      const geo = res.data.results[0].geometry.location;
+      return {
+        lat: geo.lat,
+        lng: geo.lng,
+        source: "GoogleMaps",
+      };
+    }
+  } catch (err) {
+    console.warn("Google Maps error:", err.message);
+  }
+  return null;
+}
+
 // --- Combined Function ---
 async function geocodeAddress(address) {
   const cleanAddress = address.replace(/\s+/g, ' ').trim();
@@ -87,6 +111,7 @@ async function geocodeAddress(address) {
     geocodeWithNominatim,
     geocodeWithOpenCage,
     geocodeWithLocationIQ,
+    geocodeWithGoogleMaps, // Google Maps as fallback
   ];
 
   for (const method of methods) {
