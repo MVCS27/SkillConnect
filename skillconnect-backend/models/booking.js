@@ -8,6 +8,8 @@ const bookingSchema = new mongoose.Schema({
   status: { type: String, default: "processing" },
   date: String,
   time: String,
+  agreedAmount: { type: Number },
+  agreedUnit: { type: String },
   customerConfirmed: { type: Boolean, default: false },
   providerConfirmed: { type: Boolean, default: false },
 }, { timestamps: true });

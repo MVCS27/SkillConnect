@@ -21,6 +21,8 @@ export default function ProviderDetails() {
   const [customerData, setCustomerData] = useState(null);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [ratings, setRatings] = useState([]);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [pendingBooking, setPendingBooking] = useState(null);
 
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTime, setSelectedTime] = useState("");
@@ -249,7 +251,16 @@ export default function ProviderDetails() {
                   alert("Please select date and time.");
                   return;
                 }
-                setShowLocationModal(true);
+                // Prepare booking details for modal
+                setPendingBooking({
+                  date: selectedDate,
+                  time: selectedTime === "custom" ? customTime : selectedTime,
+                  location: serviceLocation,
+                  services: selectedServices.length > 0 ? selectedServices : ["General"],
+                  agreedAmount: provider.rateAmount,
+                  agreedUnit: provider.rateUnit,
+                });
+                setShowConfirmModal(true);
               }}
               disabled={bookingLoading}
             >
@@ -281,6 +292,8 @@ export default function ProviderDetails() {
                       date: dateStr,
                       time: selectedTime === "custom" ? customTime : selectedTime,
                       serviceLocation: coords, // send coordinates
+                      agreedAmount: provider.rateAmount, // <-- add this
+                      agreedUnit: provider.rateUnit      // <-- add this
                     }),
                   });
                   const data = await response.json();
@@ -329,6 +342,78 @@ export default function ProviderDetails() {
           ))}
         </div>
       </div>
+
+      {showConfirmModal && pendingBooking && (
+        <div className="modal-overlay" style={{
+          position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh",
+          background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000
+        }}>
+          <div style={{
+            background: "#fff", borderRadius: 8, padding: 24, minWidth: 320, position: "relative"
+          }}>
+            <button
+              onClick={() => setShowConfirmModal(false)}
+              style={{
+                position: "absolute", top: 8, right: 8, background: "none", border: "none", fontSize: 22, cursor: "pointer"
+              }}
+              aria-label="Close"
+            >×</button>
+            <h3>Confirm Booking Details</h3>
+            <p><b>Date:</b> {pendingBooking.date && new Date(pendingBooking.date).toLocaleDateString()}</p>
+            <p><b>Time:</b> {pendingBooking.time}</p>
+            <p><b>Location:</b> {pendingBooking.location ? JSON.stringify(pendingBooking.location) : "Not set"}</p>
+            <p><b>Services:</b> {pendingBooking.services.join(", ")}</p>
+            <p><b>Agreed Payment:</b> ₱{pendingBooking.agreedAmount} {pendingBooking.agreedUnit}</p>
+            <div style={{ marginTop: 20, display: "flex", gap: 12 }}>
+              <button
+                onClick={async () => {
+                  setShowConfirmModal(false);
+                  setBookingLoading(true);
+                  try {
+                    const dateStr = pendingBooking.date.getFullYear() + "-" +
+                      String(pendingBooking.date.getMonth() + 1).padStart(2, "0") + "-" +
+                      String(pendingBooking.date.getDate()).padStart(2, "0");
+                    const response = await fetch(`${API_BASE_URL}/book`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        customerId: customerData._id,
+                        providerId: provider._id,
+                        serviceCategory: pendingBooking.services.join(", "),
+                        date: dateStr,
+                        time: pendingBooking.time,
+                        serviceLocation: pendingBooking.location,
+                        agreedAmount: pendingBooking.agreedAmount,
+                        agreedUnit: pendingBooking.agreedUnit
+                      }),
+                    });
+                    const data = await response.json();
+                    if (data.status === "ok") {
+                      alert("Booking successful! Confirmation sent to your email.");
+                      navigate("/customer-profile");
+                    } else {
+                      alert("Booking failed.");
+                    }
+                  } catch (error) {
+                    alert("Something went wrong.");
+                  } finally {
+                    setBookingLoading(false);
+                  }
+                }}
+                style={{ background: "#28a745", color: "#fff", padding: "8px 16px", border: "none", borderRadius: 4 }}
+              >
+                Confirm
+              </button>
+              <button
+                onClick={() => setShowConfirmModal(false)}
+                style={{ background: "#dc3545", color: "#fff", padding: "8px 16px", border: "none", borderRadius: 4 }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -329,11 +329,20 @@ app.get("/providers/nearby", async (req, res) => {
 ///////////////////////////////////
 // For booking
 app.post("/book", async (req, res) => {
-  const { customerId, providerId, serviceCategory, date, time } = req.body;
+  const { customerId, providerId, serviceCategory, date, time, agreedAmount, agreedUnit } = req.body; // <-- add agreedAmount, agreedUnit
 
   try {
     const bookingId = uuidv4();
-    const booking = await Booking.create({ _id: bookingId, customerId, providerId, serviceCategory, date, time });
+    const booking = await Booking.create({
+      _id: bookingId,
+      customerId,
+      providerId,
+      serviceCategory,
+      date,
+      time,
+      agreedAmount, // <-- add this
+      agreedUnit    // <-- add this
+    });
 
     // Mark the time as unavailable for the provider
     const user = await User.findOne({ _id: providerId });
@@ -374,6 +383,7 @@ app.post("/book", async (req, res) => {
 Service(s): ${serviceCategory}
 Date: ${date}
 Time: ${time}
+Agreed Payment: ₱${agreedAmount || "N/A"} ${agreedUnit || ""}
 
 Customer: ${customer.firstName} ${customer.lastName} (${customer.email})
 Provider: ${provider.firstName} ${provider.lastName} (${provider.email})
@@ -980,11 +990,22 @@ app.post("/booking/confirm-complete", async (req, res) => {
       },
     });
 
+    // --- RECEIPT EMAIL ---
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: [customer.email, provider.email],
-      subject: "Booking Completed",
-      text: `Your booking for ${booking.serviceCategory} is now marked as complete. If this was not you, please contact admin immediately.`,
+      subject: "Booking Completed - Receipt",
+      text: `Your booking for ${booking.serviceCategory} is now marked as complete.
+
+Booking Details:
+Service: ${booking.serviceCategory}
+Date: ${booking.date}
+Time: ${booking.time}
+Agreed Payment: ₱${booking.agreedAmount || "N/A"} ${booking.agreedUnit || ""}
+Customer: ${customer.firstName} ${customer.lastName} (${customer.email})
+Provider: ${provider.firstName} ${provider.lastName} (${provider.email})
+
+Thank you for using SkillConnect!`,
     };
 
     await transporter.sendMail(mailOptions);

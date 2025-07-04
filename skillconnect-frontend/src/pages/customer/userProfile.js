@@ -160,6 +160,11 @@ export default function UserDetails() {
                       <p>Email: {booking.providerId?.email || "N/A"}</p>
                       <p>Phone: {booking.providerId?.phoneNumber || "N/A"}</p>
                       <p>Service: {booking.serviceCategory}</p>
+                      {booking.agreedAmount && booking.agreedUnit && (
+                        <p>
+                          Agreed Payment: ₱{booking.agreedAmount} {booking.agreedUnit}
+                        </p>
+                      )}
                       <button onClick={() => cancelBooking(booking._id)}>Cancel</button>
                     </div>
                   ))}
