@@ -121,6 +121,9 @@ export default function UserDetails() {
             <p>{email}</p>
             <p>{address.street}, {address.barangay}</p>
             <p>{address.cityMunicipality}, {address.province}</p>
+            {userData.rateAmount && userData.rateUnit && (
+              <p>Rate: ₱{userData.rateAmount} {userData.rateUnit}</p>
+            )}
           </div>
     
           <img

@@ -144,6 +144,12 @@ export default function ProviderList() {
           />
           <p className="provider-name">{provider.firstName} {provider.lastName}</p>
           <p className="provider-service">{provider.serviceCategory}</p>
+          {(provider.rateAmount || provider.rateUnit) && (
+            <p className="provider-rate">
+              {provider.rateAmount ? `₱${provider.rateAmount}` : ""}
+              {provider.rateUnit ? ` ${provider.rateUnit}` : ""}
+            </p>
+          )}
           <div>
             {[1,2,3,4,5].map(star => (
               <FontAwesomeIcon

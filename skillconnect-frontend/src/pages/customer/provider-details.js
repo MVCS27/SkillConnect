@@ -144,6 +144,9 @@ export default function ProviderDetails() {
             <p>
               Address: {provider.address?.street}, {provider.address?.barangay}, {provider.address?.cityMunicipality}, {provider.address?.province}
             </p>
+            {provider.rateAmount && provider.rateUnit && (
+              <p>Rate: ₱{provider.rateAmount} {provider.rateUnit}</p>
+            )}
           </div>
           <img
             src={providerImage}

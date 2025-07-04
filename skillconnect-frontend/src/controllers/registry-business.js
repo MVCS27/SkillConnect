@@ -57,6 +57,9 @@ export class RegistryBusiness {
       barangayClearance,
       certificate,
       governmentId,
+      rateAmount,
+      rateUnit,
+      customRateUnit,
     } = this.component.state;
 
     if (password !== confirmPassword) {
@@ -88,6 +91,8 @@ export class RegistryBusiness {
     if (barangayClearance) formData.append("barangayClearance", barangayClearance);
     if (certificate) formData.append("certificate", certificate);
     if (governmentId) formData.append("governmentId", governmentId);
+    formData.append("rateAmount", rateAmount);
+    formData.append("rateUnit", rateUnit === "custom" ? customRateUnit : rateUnit);
 
     fetch(`${API_BASE_URL}/register-business`, {
       method: "POST",

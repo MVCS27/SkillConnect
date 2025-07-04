@@ -57,6 +57,8 @@ const UserDetailsSchema = new mongoose.Schema(
     },
     isSuspended: { type: Boolean, default: false },
     isRejected: { type: Boolean, default: false },
+    rateAmount: { type: Number },
+    rateUnit: { type: String },
   },
   {
     collection: "users",

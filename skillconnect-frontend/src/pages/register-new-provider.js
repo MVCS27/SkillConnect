@@ -391,6 +391,50 @@ export default class ProviderSignUp extends Component {
               </div>
             )}
 
+            {/* --- RATES FIELDS BELOW SERVICE CATEGORY --- */}
+            <div className="mb-3">
+              <label>Rate Amount (₱):</label>
+              <input
+                type="number"
+                min="0"
+                className="form-control"
+                placeholder="e.g. 100"
+                value={this.state.rateAmount || ""}
+                onChange={e => this.setState({ rateAmount: e.target.value })}
+                required
+              />
+            </div>
+            <div className="mb-3">
+              <label>Rate Unit/Label:</label>
+              <select
+                className="form-control"
+                value={this.state.rateUnit || ""}
+                onChange={e => {
+                  const value = e.target.value;
+                  this.setState({ rateUnit: value });
+                  if (value !== "custom") this.setState({ customRateUnit: "" });
+                }}
+                required
+              >
+                <option value="">Select unit</option>
+                <option value="per hour">per hour</option>
+                <option value="per session">per session</option>
+                <option value="per kilo">per kilo</option>
+                <option value="custom">Custom...</option>
+              </select>
+              {this.state.rateUnit === "custom" && (
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Enter custom unit"
+                  value={this.state.customRateUnit || ""}
+                  onChange={e => this.setState({ customRateUnit: e.target.value })}
+                  required
+                />
+              )}
+            </div>
+            {/* --- END RATES FIELDS --- */}
+
 
             <div className="mb-3">
               <label>NBI Clearance</label>

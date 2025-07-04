@@ -33,6 +33,9 @@ function UpdateUser() {
   });
   const [profileImage, setProfileImage] = useState(null); // for preview
   const [profileImageFile, setProfileImageFile] = useState(null);
+  const [rateAmount, setRateAmount] = useState(location.state?.rateAmount || "");
+  const [rateUnit, setRateUnit] = useState(location.state?.rateUnit || "");
+  const [customRateUnit, setCustomRateUnit] = useState("");
 
   useEffect(() => {
     if (location.state) {
@@ -47,6 +50,8 @@ function UpdateUser() {
         province: "",
         zipCode: "",
       });
+      setRateAmount(location.state.rateAmount || "");
+      setRateUnit(location.state.rateUnit || "");
     }
   }, [location.state]);
 
@@ -128,13 +133,15 @@ function UpdateUser() {
         Accept: "application/json",
       },
       body: JSON.stringify({
-        _id: location.state._id, 
+        _id: location.state._id,
         firstName,
         lastName,
         phoneNumber,
         email,
         address,
-        ...(password ? { password } : {})
+        ...(password ? { password } : {}),
+        rateAmount,
+        rateUnit: rateUnit === "custom" ? customRateUnit : rateUnit,
       }),
     });
     const data = await response.json();
@@ -372,6 +379,43 @@ function UpdateUser() {
             onChange={(e) => handleAddressChange('zipCode', e.target.value)}
           />
         </div>
+<div className="mb-3">
+  <label>Rate Amount (₱):</label>
+  <input
+    type="number"
+    min="0"
+    className="form-control"
+    placeholder="e.g. 100"
+    value={rateAmount || ""}
+    onChange={e => setRateAmount(e.target.value)}
+  />
+</div>
+<div className="mb-3">
+  <label>Rate Unit/Label:</label>
+  <select
+    className="form-control"
+    value={rateUnit || ""}
+    onChange={e => {
+      setRateUnit(e.target.value);
+      if (e.target.value !== "custom") setCustomRateUnit("");
+    }}
+  >
+    <option value="">Select unit</option>
+    <option value="per hour">per hour</option>
+    <option value="per session">per session</option>
+    <option value="per kilo">per kilo</option>
+    <option value="custom">Custom...</option>
+  </select>
+  {rateUnit === "custom" && (
+    <input
+      type="text"
+      className="form-control"
+      placeholder="Enter custom unit"
+      value={customRateUnit || ""}
+      onChange={e => setCustomRateUnit(e.target.value)}
+    />
+  )}
+</div>
 
         <div style={{ display: "flex", gap: "1rem" }}>
           <button onClick={updateData} className="btn btn-primary">

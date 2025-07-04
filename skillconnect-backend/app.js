@@ -135,13 +135,15 @@ app.post("/register", async (req, res) => {
 });
 
 app.post("/updateUser", async (req, res) => {
-    const { _id, firstName, lastName, phoneNumber, password, address } = req.body;
+    const { _id, firstName, lastName, phoneNumber, password, address, rateAmount, rateUnit } = req.body;
     try {
         const updateFields = {
             firstName,
             lastName,
             phoneNumber,
             address,
+            rateAmount, // <-- add this
+            rateUnit,   // <-- add this
         };
         if (password) {
             const hashedPassword = await bcrypt.hash(password, 10);
@@ -240,8 +242,8 @@ app.post("/user/update-address", async (req, res) => {
 app.get("/providerList", async (req, res) => {
   try {
     const providers = await User.find({ userType: "business", isVerifiedBusiness: { $ne: false } }).select(
-      "_id firstName lastName email phoneNumber address serviceCategory"
-    );
+      "_id firstName lastName email phoneNumber address serviceCategory rateAmount rateUnit"
+    ); // <-- add rateAmount rateUnit here
 
     const formatted = providers.map((provider) => ({
       _id: provider._id,
@@ -253,6 +255,8 @@ app.get("/providerList", async (req, res) => {
       address: provider.address || {},
       distance: Math.floor(Math.random() * 5) + 1,
       image: `/images/${provider.governmentId || "default.jpg"}`,
+      rateAmount: provider.rateAmount || "", // <-- add this
+      rateUnit: provider.rateUnit || "",     // <-- add this
     }));
 
     res.json({ status: "ok", data: formatted });
@@ -265,7 +269,7 @@ app.get("/providerList", async (req, res) => {
 app.get("/provider/:id", async (req, res) => {
   try {
     const provider = await User.findOne({ _id: req.params.id }).select(
-      "_id firstName lastName email phoneNumber address serviceCategory governmentId"
+      "_id firstName lastName email phoneNumber address serviceCategory governmentId rateAmount rateUnit"
     );
     if (!provider) {
       return res.status(404).json({ status: "error", error: "Provider not found" });
@@ -279,7 +283,9 @@ app.get("/provider/:id", async (req, res) => {
       phoneNumber: provider.phoneNumber || "",
       serviceCategory: provider.serviceCategory || "Service Provider",
       address: provider.address || {},
-      image: `/images/${provider.governmentId || "default.jpg"}`
+      image: `/images/${provider.governmentId || "default.jpg"}`,
+      rateAmount: provider.rateAmount || "",
+      rateUnit: provider.rateUnit || "",
     };
 
     res.json({ status: "ok", data: formatted });
@@ -521,6 +527,8 @@ app.post("/register-business", businessUpload, async (req, res) => {
     password,
     address: addressStr,
     serviceCategory,
+    rateAmount,
+    rateUnit,
   } = req.body;
 
   let address = {};
@@ -589,7 +597,9 @@ app.post("/register-business", businessUpload, async (req, res) => {
       serviceCategory,
       verificationDocuments,
       isVerifiedBusiness: false,
-      location: geo
+      location: geo,
+      rateAmount,
+      rateUnit,
     });
 
     res.send({ status: "success", _id });
