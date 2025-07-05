@@ -448,7 +448,14 @@ function UpdateUser() {
       >×</button>
       <h4>Select an Avatar</h4>
       {/* Group avatars by category */}
-      {["Plumber", "Electrician", "Cleaner", "Technician", "Baker", "Barber", "Carpenter", "Cook", "ComputerTech", "ComTech"].map(category => (
+      {[ "AutomobileMechanic",
+        "Baker","Barber",
+        "Carpenter","Cleaner","ClothesWasher","ComputerTech","Cook",
+        "Electrician",
+        "MotorMechanic",
+        "Painter","PhoneTech","Plumber",
+        "Technician",
+      ].map(category => (
         <div key={category}>
           <h5>{category}</h5>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
