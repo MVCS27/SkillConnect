@@ -59,6 +59,7 @@ const UserDetailsSchema = new mongoose.Schema(
     isRejected: { type: Boolean, default: false },
     rateAmount: { type: Number },
     rateUnit: { type: String },
+    avatar: { type: String, default: "" },
   },
   {
     collection: "users",

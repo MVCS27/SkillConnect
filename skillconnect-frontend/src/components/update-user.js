@@ -36,6 +36,8 @@ function UpdateUser() {
   const [rateAmount, setRateAmount] = useState(location.state?.rateAmount || "");
   const [rateUnit, setRateUnit] = useState(location.state?.rateUnit || "");
   const [customRateUnit, setCustomRateUnit] = useState("");
+  const [showAvatarModal, setShowAvatarModal] = useState(false);
+  const [selectedAvatar, setSelectedAvatar] = useState(location.state?.avatar || "");
 
   useEffect(() => {
     if (location.state) {
@@ -139,6 +141,7 @@ function UpdateUser() {
         phoneNumber,
         email,
         address,
+        avatar: selectedAvatar, // <-- send avatar filename
         ...(password ? { password } : {}),
         rateAmount,
         rateUnit: rateUnit === "custom" ? customRateUnit : rateUnit,
@@ -164,18 +167,15 @@ function UpdateUser() {
         {/* Profile Image Upload */}
         <div className="mb-3 text-center">
           <img
-            src={profileImage || "https://placehold.co/100x100"}
+            src={selectedAvatar ? `/avatars/${selectedAvatar}` : "https://placehold.co/100x100?text=No+Avatar"}
             alt="Profile"
             className="profile-image"
             style={{ width: '8em', height: '12em', borderRadius: "50% / 30%", objectFit: "cover", margin: '.5em 2em' }}
-            onError={e => { e.target.onerror = null; e.target.src = "https://placehold.co/100x100"; }}
+            onError={e => { e.target.onerror = null; e.target.src = "https://placehold.co/100x100?text=No+Avatar"; }}
           />
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleImageChange}
-            style={{ marginTop: 10 }}
-          />
+          <button type="button" className="btn btn-secondary" onClick={() => setShowAvatarModal(true)}>
+            Change Avatar
+          </button>
         </div>
 
         <div className="mb-3">
@@ -430,6 +430,55 @@ function UpdateUser() {
           </button>
         </div>
       </div>
+
+      {showAvatarModal && (
+  <div className="modal-overlay" style={{
+    position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh",
+    background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000
+  }}>
+    <div style={{
+      background: "#fff", borderRadius: 8, padding: 24, minWidth: 320, position: "relative", maxHeight: "80vh", overflowY: "auto"
+    }}>
+      <button
+        onClick={() => setShowAvatarModal(false)}
+        style={{
+          position: "absolute", top: 8, right: 8, background: "none", border: "none", fontSize: 22, cursor: "pointer"
+        }}
+        aria-label="Close"
+      >×</button>
+      <h4>Select an Avatar</h4>
+      {/* Group avatars by category */}
+      {["Plumber", "Electrician", "Cleaner", "Technician", "Baker", "Barber", "Carpenter", "Cook", "ComputerTech", "ComTech"].map(category => (
+        <div key={category}>
+          <h5>{category}</h5>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+            {[1,2,3,4,5,6,7,8,9,10].map(num => {
+              const filename = `${category} (${num}).png`;
+              return (
+                <img
+                  key={filename}
+                  src={`/avatars/${filename}`}
+                  alt={filename}
+                  style={{
+                    width: 60, height: 60, borderRadius: "50%",
+                    border: selectedAvatar === filename ? "3px solid #007bff" : "2px solid #ccc",
+                    cursor: "pointer"
+                  }}
+                  onClick={() => {
+                    setSelectedAvatar(filename);
+                    setShowAvatarModal(false);
+                  }}
+                  onError={e => { e.target.style.display = "none"; }}
+                />
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
+
     </div>
   );
 }

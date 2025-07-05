@@ -135,16 +135,17 @@ app.post("/register", async (req, res) => {
 });
 
 app.post("/updateUser", async (req, res) => {
-    const { _id, firstName, lastName, phoneNumber, password, address, rateAmount, rateUnit } = req.body;
+    const { _id, firstName, lastName, phoneNumber, password, address, rateAmount, rateUnit, avatar } = req.body;
+    const updateFields = {
+      firstName,
+      lastName,
+      phoneNumber,
+      address,
+      rateAmount,
+      rateUnit,
+    };
+    if (avatar) updateFields.avatar = avatar; // <-- add this
     try {
-        const updateFields = {
-            firstName,
-            lastName,
-            phoneNumber,
-            address,
-            rateAmount, // <-- add this
-            rateUnit,   // <-- add this
-        };
         if (password) {
             const hashedPassword = await bcrypt.hash(password, 10);
             updateFields.hashedPassword = hashedPassword;
@@ -242,8 +243,8 @@ app.post("/user/update-address", async (req, res) => {
 app.get("/providerList", async (req, res) => {
   try {
     const providers = await User.find({ userType: "business", isVerifiedBusiness: { $ne: false } }).select(
-      "_id firstName lastName email phoneNumber address serviceCategory rateAmount rateUnit"
-    ); // <-- add rateAmount rateUnit here
+      "_id firstName lastName email phoneNumber address serviceCategory rateAmount rateUnit avatar"
+    ); // <-- add avatar here
 
     const formatted = providers.map((provider) => ({
       _id: provider._id,
@@ -255,8 +256,9 @@ app.get("/providerList", async (req, res) => {
       address: provider.address || {},
       distance: Math.floor(Math.random() * 5) + 1,
       image: `/images/${provider.governmentId || "default.jpg"}`,
-      rateAmount: provider.rateAmount || "", // <-- add this
-      rateUnit: provider.rateUnit || "",     // <-- add this
+      rateAmount: provider.rateAmount || "",
+      rateUnit: provider.rateUnit || "",
+      avatar: provider.avatar || "", // <-- add this
     }));
 
     res.json({ status: "ok", data: formatted });
@@ -269,8 +271,8 @@ app.get("/providerList", async (req, res) => {
 app.get("/provider/:id", async (req, res) => {
   try {
     const provider = await User.findOne({ _id: req.params.id }).select(
-      "_id firstName lastName email phoneNumber address serviceCategory governmentId rateAmount rateUnit"
-    );
+      "_id firstName lastName email phoneNumber address serviceCategory governmentId rateAmount rateUnit avatar"
+    ); // <-- add avatar here
     if (!provider) {
       return res.status(404).json({ status: "error", error: "Provider not found" });
     }
@@ -286,6 +288,7 @@ app.get("/provider/:id", async (req, res) => {
       image: `/images/${provider.governmentId || "default.jpg"}`,
       rateAmount: provider.rateAmount || "",
       rateUnit: provider.rateUnit || "",
+      avatar: provider.avatar || "", // <-- add this
     };
 
     res.json({ status: "ok", data: formatted });

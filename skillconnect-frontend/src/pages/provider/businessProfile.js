@@ -127,11 +127,13 @@ export default function UserDetails() {
           </div>
     
           <img
-            src={profileImage}
-            alt="Profile"
-            className="profile-image"
-            onError={e => { e.target.onerror = null; e.target.src = "https://placehold.co/100x100?text=No+Image"; }}
-          />
+  src={userData.avatar
+    ? `/avatars/${userData.avatar}`
+    : "https://placehold.co/100x100?text=No+Avatar"}
+  alt="Profile"
+  className="profile-image"
+  onError={e => { e.target.onerror = null; e.target.src = "https://placehold.co/100x100?text=No+Avatar"; }}
+/>
 
         </div>
 

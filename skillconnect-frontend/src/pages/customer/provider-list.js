@@ -137,7 +137,11 @@ export default function ProviderList() {
           onClick={() => navigate(`/provider-details/${provider._id}`)}
         >
           <img
-            src={providerImages[provider._id] || "https://placehold.co/100x100?text=No+Image"}
+            src={
+              provider.avatar
+                ? `/avatars/${provider.avatar}`
+                : providerImages[provider._id] || "https://placehold.co/100x100?text=No+Image"
+            }
             alt="Profile"
             className="provider-image"
             onError={e => { e.target.onerror = null; e.target.src = "https://placehold.co/100x100?text=No+Image"; }}

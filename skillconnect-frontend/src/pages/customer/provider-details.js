@@ -151,7 +151,11 @@ export default function ProviderDetails() {
             )}
           </div>
           <img
-            src={providerImage}
+            src={
+              provider.avatar
+                ? `/avatars/${provider.avatar}`
+                : providerImage || "https://placehold.co/100x100?text=No+Image"
+            }
             alt="Provider"
             className="profile-image"
             onError={e => { e.target.onerror = null; e.target.src = "https://placehold.co/100x100?text=No+Image"; }}
