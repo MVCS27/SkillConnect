@@ -90,7 +90,10 @@ const businessUpload = upload.fields([
   { name: "nbiClearance", maxCount: 1 },
   { name: "barangayClearance", maxCount: 1 },
   { name: "certificate", maxCount: 1 },
-  { name: "governmentId", maxCount: 1 },
+  { name: "governmentIdFront", maxCount: 1 },      // <-- add
+  { name: "governmentIdBack", maxCount: 1 },       // <-- add
+  { name: "selfieWithFrontId", maxCount: 1 },      // <-- add
+  { name: "selfieWithBackId", maxCount: 1 },       // <-- add
 ]);
 
 // Registration (add _id generation)
@@ -557,33 +560,62 @@ app.post("/register-business", businessUpload, async (req, res) => {
   const verificationDocuments = [
     {
       documentType: "nbi_clearance",
-      fileReference: files.nbiClearance?.[0]?.path
-        ? files.nbiClearance[0].path
-        : "",
+      fileReference: files.nbiClearance?.[0]?.path || "",
       status: files.nbiClearance?.[0] ? "uploaded" : "missing",
     },
     {
       documentType: "barangay_clearance",
-      fileReference: files.barangayClearance?.[0]?.path
-        ? files.barangayClearance[0].path
-        : "",
+      fileReference: files.barangayClearance?.[0]?.path || "",
       status: files.barangayClearance?.[0] ? "uploaded" : "missing",
     },
     {
       documentType: "training_certificate",
-      fileReference: files.certificate?.[0]?.path
-        ? files.certificate[0].path
-        : "",
+      fileReference: files.certificate?.[0]?.path || "",
       status: files.certificate?.[0] ? "uploaded" : "missing",
     },
+    // --- NEW GOVERNMENT ID FIELDS ---
     {
-      documentType: "government_id",
-      fileReference: files.governmentId?.[0]?.path
-        ? files.governmentId[0].path
-        : "",
-      status: files.governmentId?.[0] ? "uploaded" : "missing",
+      documentType: "government_id_front",
+      fileReference: files.governmentIdFront?.[0]?.path || "",
+      status: files.governmentIdFront?.[0] ? "uploaded" : "missing",
+    },
+    {
+      documentType: "government_id_back",
+      fileReference: files.governmentIdBack?.[0]?.path || "",
+      status: files.governmentIdBack?.[0] ? "uploaded" : "missing",
+    },
+    {
+      documentType: "selfie_with_front_id",
+      fileReference: files.selfieWithFrontId?.[0]?.path || "",
+      status: files.selfieWithFrontId?.[0] ? "uploaded" : "missing",
+    },
+    {
+      documentType: "selfie_with_back_id",
+      fileReference: files.selfieWithBackId?.[0]?.path || "",
+      status: files.selfieWithBackId?.[0] ? "uploaded" : "missing",
     },
   ];
+
+  // --- Assign default avatar based on service category ---
+  function getDefaultAvatar(category) {
+    // You can expand this mapping as needed
+    const map = {
+      Plumber: "Plumber (1).png",
+      Electrician: "Electrician (1).png",
+      Cleaner: "Cleaner (1).png",
+      Technician: "Technician (1).png",
+      Baker: "Baker (1).png",
+      Barber: "Barber (1).png",
+      Carpenter: "Carpenter (1).png",
+      Cook: "Cook (1).png",
+      ComputerTech: "ComputerTech (1).png",
+      ComTech: "ComTech (1).png",
+    };
+    // Fallback to a generic avatar if not found
+    return map[category] || "General (1).png";
+  }
+
+  const avatar = getDefaultAvatar(serviceCategory);
 
   try {
     const oldUser = await User.findOne({ email });
@@ -613,6 +645,7 @@ app.post("/register-business", businessUpload, async (req, res) => {
       location: geo,
       rateAmount,
       rateUnit,
+      avatar, // <-- assign avatar here
     });
 
     res.send({ status: "success", _id });
@@ -749,7 +782,6 @@ app.post("/admin/delete-rejected-user", async (req, res) => {
     res.status(500).json({ status: "error", error: "Failed to delete user data" });
   }
 });
-
 
 // Get all customers (users with userType "customer")
 app.get("/admin/customers", async (req, res) => {

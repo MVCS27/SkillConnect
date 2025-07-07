@@ -57,6 +57,10 @@ export class RegistryBusiness {
       barangayClearance,
       certificate,
       governmentId,
+      governmentIdFront,
+      governmentIdBack,
+      selfieWithFrontId,
+      selfieWithBackId,
       rateAmount,
       rateUnit,
       customRateUnit,
@@ -91,6 +95,10 @@ export class RegistryBusiness {
     if (barangayClearance) formData.append("barangayClearance", barangayClearance);
     if (certificate) formData.append("certificate", certificate);
     if (governmentId) formData.append("governmentId", governmentId);
+    if (governmentIdFront) formData.append("governmentIdFront", governmentIdFront);
+    if (governmentIdBack) formData.append("governmentIdBack", governmentIdBack);
+    if (selfieWithFrontId) formData.append("selfieWithFrontId", selfieWithFrontId);
+    if (selfieWithBackId) formData.append("selfieWithBackId", selfieWithBackId);
     formData.append("rateAmount", rateAmount);
     formData.append("rateUnit", rateUnit === "custom" ? customRateUnit : rateUnit);
 

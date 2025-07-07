@@ -468,13 +468,46 @@ export default class ProviderSignUp extends Component {
 
             <div className="mb-3">
               <label>Government-issued ID</label>
-              <input
-                type="file"
-                accept=".pdf,image/*"
-                className="form-control"
-                onChange={(e) => this.setState({ governmentId: e.target.files[0] })}
-                required
-              />
+              <div style={{ marginBottom: 8 }}>
+    <label>Front picture of ID</label>
+    <input
+      type="file"
+      accept=".pdf,image/*"
+      className="form-control"
+      onChange={(e) => this.setState({ governmentIdFront: e.target.files[0] })}
+      required
+    />
+  </div>
+  <div style={{ marginBottom: 8 }}>
+    <label>Back picture of ID</label>
+    <input
+      type="file"
+      accept=".pdf,image/*"
+      className="form-control"
+      onChange={(e) => this.setState({ governmentIdBack: e.target.files[0] })}
+      required
+    />
+  </div>
+  <div style={{ marginBottom: 8 }}>
+    <label>Selfie with front picture of ID</label>
+    <input
+      type="file"
+      accept=".pdf,image/*"
+      className="form-control"
+      onChange={(e) => this.setState({ selfieWithFrontId: e.target.files[0] })}
+      required
+    />
+  </div>
+  <div>
+    <label>Selfie with back picture of ID</label>
+    <input
+      type="file"
+      accept=".pdf,image/*"
+      className="form-control"
+      onChange={(e) => this.setState({ selfieWithBackId: e.target.files[0] })}
+      required
+    />
+  </div>
             </div>
       
                 <div className="d-grid">
