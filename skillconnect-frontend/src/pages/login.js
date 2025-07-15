@@ -21,6 +21,10 @@ export default class Login extends Component {
       adminPasswordSent: false,
       adminPassword: "",
       adminError: "",
+      otpSent: false,
+      otpInput: "",
+      otpStatus: "", // "pending", "success", "error"
+      otpError: "",
     };
   }
 
@@ -68,6 +72,42 @@ export default class Login extends Component {
     }
   }
 
+  handleSubmit = async (e) => {
+    e.preventDefault();
+    const { email, password } = this.state;
+    // 1. Check credentials first
+    const res = await fetch(`${API_BASE_URL}/loginUser`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await res.json();
+    if (data.status === "success") {
+      // 2. Send OTP to email
+      this.setState({ otpSent: false, otpInput: "", otpStatus: "pending", otpError: "" });
+      const otpRes = await fetch(`${API_BASE_URL}/send-code`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const otpData = await otpRes.json();
+      if (otpData.success) {
+        this.setState({ otpSent: true, otpStatus: "" });
+        // Save token and userType temporarily until OTP is verified
+        this._pendingLogin = {
+          token: data.data,
+          userType: data.userType,
+          isVerifiedBusiness: data.isVerifiedBusiness,
+          user: data.user,
+        };
+      } else {
+        this.setState({ otpStatus: "error", otpError: otpData.message || "Failed to send OTP." });
+      }
+    } else {
+      this.setState({ otpStatus: "error", otpError: data.error || "Login failed." });
+    }
+  };
+
   componentDidMount() {
     const queryParams = new URLSearchParams(window.location.search);
     if (queryParams.get("registered") === "success") {
@@ -88,7 +128,7 @@ export default class Login extends Component {
             </div>
           )}
 
-          <form className="Form" onSubmit={this.state.email === "admin@skillconnect.com" ? this.handleAdminLogin : this.handleSubmit}>
+          <form className="Form" onSubmit={this.handleSubmit}>
             <h3 className='text-center'>Login</h3>
 
             <div className="mb-3">
@@ -124,6 +164,38 @@ export default class Login extends Component {
                 <p>Admin detected. <button type="button" onClick={this.handleSendAdminPassword} disabled={this.state.adminPasswordSent}>Send Password</button></p>
                 {this.state.adminPasswordSent && <p style={{ color: "green" }}>Password sent to admin</p>}
                 {this.state.adminError && <p style={{ color: "red" }}>{this.state.adminError}</p>}
+              </div>
+            )}
+
+            {this.state.otpSent && (
+              <div className="otp-popup" style={{ background: "#fffbe6", border: "1px solid #f0e130", padding: 16, borderRadius: 8, marginTop: 8 }}>
+                <p>Enter the verification code sent to your email.</p>
+                <input
+                  type="text"
+                  value={this.state.otpInput}
+                  onChange={e => this.setState({ otpInput: e.target.value })}
+                  className={`form-control${this.state.otpStatus === "error" ? " is-invalid" : ""}${this.state.otpStatus === "success" ? " is-valid" : ""}`}
+                  style={{ borderColor: this.state.otpStatus === "error" ? "red" : this.state.otpStatus === "success" ? "green" : undefined }}
+                />
+                <button type="button" onClick={this.helper.verifyOtp} disabled={this.state.otpStatus === "success"}>Verify</button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    this.setState({ otpStatus: "pending" });
+                    fetch(`${API_BASE_URL}/send-code`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ email: this.state.email }),
+                    }).then(() => this.setState({ otpStatus: "", otpError: "" }));
+                  }}
+                  style={{ marginLeft: 8 }}
+                  disabled={this.state.otpStatus === "pending"}
+                >
+                  Resend Code
+                </button>
+                {this.state.otpStatus === "pending" && <div style={{ color: "#888" }}>Sending code...</div>}
+                {this.state.otpStatus === "error" && <div style={{ color: "red" }}>{this.state.otpError}</div>}
+                {this.state.otpStatus === "success" && <div style={{ color: "green" }}>Email verified!</div>}
               </div>
             )}
 
